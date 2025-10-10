@@ -1,0 +1,6 @@
+DELETE http://localhost:4000/api/ads/deleteAd
+Content-Type: application/json
+
+{
+  "adId":12
+}

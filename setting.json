@@ -1,0 +1,6 @@
+{
+    "typescript.enablePromptUseWorkspaceTsdk": false,
+    "typescript.tsdk": null,
+    "javascript.validate.enable": true,
+    "typescript.validate.enable": false
+}
