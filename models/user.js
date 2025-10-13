@@ -9,16 +9,32 @@ const UserModel = {
             const joinDate = new Date().toISOString().split('T')[0];
             const result = await postgres.query(
                 `INSERT INTO users 
-                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn")
+                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key)
                 VALUES 
-                ($1, $2, $3, $4, $5, $6,$7,$8,$9)
+                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10)
                 RETURNING *`,
-                [email, password, userName, country, gender, false, "ohhhhh! I am cool and mysterious", joinDate, false]
+                [email, password, userName, country, gender, false, "ohhhhh! I am cool and mysterious", joinDate, false, ""]
             );
 
             return result.rows[0];
         } catch (e) {
             throw new Error("Something went wrong while signing up");
+        }
+    },
+    async getPrivateKey(userId) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query('SELECT * FROM private_keys WHERE "userId" = $1', [userId]);
+
+
+            if (result.rows.length > 0) {
+                return result.rows[0];
+            } else {
+                return null;
+            }
+        } catch (e) {
+            console.log(e);
         }
     },
 
@@ -122,7 +138,7 @@ const UserModel = {
     },
 
 
-    async deleteAndGetVerifiedUser(id, email) {
+    async deleteAndGetVerifiedUser(id, email, privateKey, publicKey) {
         const { postgres } = await connectAll();
         const client = await postgres.connect();
 
@@ -131,8 +147,8 @@ const UserModel = {
 
 
             await client.query(
-                `UPDATE users SET "isVerified"=$1 WHERE id = $2`,
-                [true, id]
+                `UPDATE users SET "isVerified"=$1, public_key=$2 WHERE id=$3`,
+                [true, publicKey, id]
             );
 
             // Delete unverified entry
@@ -142,7 +158,15 @@ const UserModel = {
             );
 
             await client.query(`DELETE FROM "OTP" WHERE email = $1`,
-                [email])
+                [email]);
+
+
+            await client.query(
+                `INSERT INTO private_keys ("userId", private_key)
+                VALUES ($1, $2)
+                RETURNING *`,
+                [id, privateKey]
+            );
 
             // Get the verified one
             const result = await client.query(
@@ -193,7 +217,7 @@ const UserModel = {
     },
 
 
-    async CompleteSignUpWithGoogle(user) {
+    async CompleteSignUpWithGoogle(user, publicKey, privateKey) {
         const { postgres } = await connectAll();
         const client = await postgres.connect();
         const joinDate = new Date().toISOString().split('T')[0];
@@ -202,16 +226,22 @@ const UserModel = {
 
             const result = await postgres.query(
                 `INSERT INTO users 
-                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn")
+                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key)
                 VALUES 
-                ($1, $2, $3, $4, $5, $6,$7,$8,$9)
+                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10)
                 RETURNING *`,
-                [user.email, user.password, user.userName, user.country, user.gender, true, "ohhhhh! I am cool and mysterious", joinDate, true]
+                [user.email, user.password, user.userName, user.country, user.gender, true, "ohhhhh! I am cool and mysterious", joinDate, true, publicKey]
             );
 
             await client.query(`DELETE FROM users WHERE email = $1 AND "isVerified"=$2`,
                 [user.email, false]);
 
+            await client.query(
+                `INSERT INTO private_keys ("userId", private_key)
+                VALUES ($1, $2)
+                RETURNING *`,
+                [result.rows[0].id, privateKey]
+            );
 
             await client.query('COMMIT');
 

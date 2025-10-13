@@ -15,10 +15,10 @@ async function connectAll() {
 
   try {
     // 1. Connect to MongoDB Atlas (only if not connected)
-    // if (!mongoose.connection.readyState) {
-    //   await mongoose.connect(process.env.MONGODB_URI);
-    //   console.log('✅ Connected to MongoDB Atlas');
-    // }
+    if (!mongoose.connection.readyState) {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('✅ Connected to MongoDB Atlas');
+    }
 
     // 2. Connect to Neon PostgreSQL
     pgPoolInstance = new Pool({

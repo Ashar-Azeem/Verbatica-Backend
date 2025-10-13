@@ -20,6 +20,7 @@ router.post('/register', async (req, res) => {
 
         const userName = generateUniqueGoofyName();
         const user = await userModel.register(email, hashedPassword, userName, country, gender);
+
         const token = user.id;
 
         await userModel.sendOtpAndSaveInDB(email);
@@ -37,13 +38,13 @@ router.post('/register', async (req, res) => {
 
 router.post('/verifyOTP', async (req, res) => {
     try {
-        const { email, userId, otp } = req.body;
+        const { email, userId, otp, privateKey, publicKey } = req.body;
         const otpData = await userModel.getOtp(email);
         if (otpData.otp != otp) {
             return res.status(400).json({ error: 'Invalid OTP' });
         }
 
-        const user = await userModel.deleteAndGetVerifiedUser(userId, email);
+        const user = await userModel.deleteAndGetVerifiedUser(userId, email, privateKey, publicKey);
 
         res.status(200).json({
             message: 'User verified successfully',
@@ -84,7 +85,8 @@ router.post('/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (isMatch) {
-            return res.status(200).json({ message: 'Login successful', user: user });
+            const result = await userModel.getPrivateKey(user.id);
+            return res.status(200).json({ message: 'Login successful', user: user, privateKey: result.private_key });
 
         } else {
             return res.status(400).json({ error: 'Invalid password' });
@@ -153,7 +155,6 @@ router.post('/resetPassword', async (req, res) => {
 router.post('/continueWithGoogle', async (req, res) => {
     try {
         const { token } = req.body;
-        console.log("hehehe");
         const email = await verifyGoogleToken(token);
 
         //Meaning that if user already exists and isVerified then even if they registered old school way the account will be merged.
@@ -166,9 +167,8 @@ router.post('/continueWithGoogle', async (req, res) => {
         const userName = generateUniqueGoofyName();
         const date = new Date().toISOString().split('T')[0]
         user = {
-            "id": 69, "email": email, "userName": userName, "country": "notSure", "gender": "NotSure", "isVerified": true, "about": "hehehehe", "avatarId": 1, "joinDate": date, "aura": 0, "isGoogleSignIn": true
+            "id": 69, "email": email, "userName": userName, "country": "notSure", "gender": "NotSure", "isVerified": true, "about": "hehehehe", "avatarId": 1, "joinDate": date, "aura": 0, "isGoogleSignIn": true, "public_key": ""
         }
-        console.log("whats up");
 
 
         return res.status(200).json({ message: 'Partial', user: user });
@@ -182,9 +182,9 @@ router.post('/continueWithGoogle', async (req, res) => {
 
 router.post('/continueWithGoogle/CompletedInfo', async (req, res) => {
     try {
-        const { user } = req.body;
+        const { user, publicKey, privateKey } = req.body;
 
-        const newUser = await userModel.CompleteSignUpWithGoogle(user);
+        const newUser = await userModel.CompleteSignUpWithGoogle(user, publicKey, privateKey);
         return res.status(200).json({ message: 'Successful', user: newUser });
 
 
