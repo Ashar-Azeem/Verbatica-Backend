@@ -1,7 +1,8 @@
-//The below statement gets the env variables and put them into process.env map
 require('dotenv').config();
 const express = require('express');
-const cors = require("cors")
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require("cors");
 const connectAll = require('./Utilities/cloud/ConnectionToCloudResources');
 const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
@@ -9,37 +10,94 @@ const userRoutes = require('./routes/user');
 const postRoute = require('./routes/post');
 const newsRoute = require('./routes/news');
 const adsRoute = require('./routes/ad');
-const businessOwner = require('./routes/business_owner');
+const businessOwnerRoute = require('./routes/business_owner');
+const chatRoute = require('./routes/chat');
+const messageRoute = require('./routes/message');
 const newsCronJob = require('./jobs/fetchNews.js');
 const { initElasticsearch } = require('./services/Elastic_Search/init');
 
 const app = express();
+const server = http.createServer(app);
 
-//middleware for converting any upcoming request data into json from string form
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+//Keeps track of all the online user 
+let onlineUsers = new Map();
+
+
+io.on("connection", (socket) => {
+
+  socket.on("join_user", (userId) => {
+    if (!userId) {
+      console.log("join_user event received without userId");
+      return;
+    }
+    socket.userId = userId;
+
+    socket.join(userId);
+    onlineUsers.set(userId, socket.id);
+    io.emit("online_users", Array.from(onlineUsers.keys()));
+
+    console.log(`User with ID ${userId} joined their personal room`);
+  });
+
+  socket.on("leave_user", (userId) => {
+    socket.leave(userId);
+    onlineUsers.delete(userId);
+    io.emit("online_users", Array.from(onlineUsers.keys()));
+
+    console.log(`User with ID ${userId} left their room`);
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.userId) {
+      onlineUsers.delete(socket.userId);
+      io.emit("online_users", Array.from(onlineUsers.keys()));
+      console.log(`User ${socket.userId} disconnected`);
+    }
+  });
+});
+
+
+app.set("io", io);
+
+// Middleware
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
-//setting up routes
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/post', postRoute);
 app.use('/api/news', newsRoute);
+app.use('/api/chat', chatRoute);
+app.use('/api/message', messageRoute);
 app.use('/api/ads', adsRoute);
-app.use('/api/businessOwner', businessOwner);
+app.use('/api/businessOwner', businessOwnerRoute);
 
 app.use((err, req, res, next) => {
   console.error("🔥 Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
 });
 
+//  Start server function
 const startServer = async () => {
   await connectAll();
   await initElasticsearch();
   // newsCronJob.start();
   newsCronJob.stop();
-  app.listen(process.env.Port, () => {
-    console.log(`Server running on port ${process.env.Port}`);
+
+  const PORT = process.env.Port || 4000;
+
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 };
 

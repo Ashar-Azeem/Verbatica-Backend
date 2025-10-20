@@ -12,7 +12,7 @@ const router = express.Router();
 router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
     try {
 
-        const { title, description, image, video, isDebate, userId, clusters, userName, avatarId, newsId } = req.body;
+        const { title, description, image, video, isDebate, userId, clusters, userName, avatarId, newsId, publicKey } = req.body;
         let post;
 
         //image post
@@ -53,7 +53,8 @@ router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
                 isUpVote: false,
                 isDownVote: false,
                 comments: post.total_comments,
-                uploadTime: post.upload_date.toISOString()
+                uploadTime: post.upload_date.toISOString(),
+                public_key: publicKey,
             }
         });
 
@@ -124,6 +125,7 @@ router.get("/forYou", async (req, res) => {
             if (history.length == 0) {
                 //fetch the trending posts for the first page 
                 const posts = await postModel.getTrendingPosts(page, userId);
+
                 return res.status(200).json({ message: 'successfull', posts: posts, vector: null, lastPost: null });
             } else {
                 //initial fetch so we have to make vector first

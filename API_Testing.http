@@ -1,6 +1,50 @@
-DELETE http://localhost:4000/api/ads/deleteAd
+# PUT http://localhost:4000/api/message/updateSeenStatus
+# Content-Type: application/json
+
+# {
+#   "chatId":"598a279f-aec5-48d4-90a5-d5446c54d0d1",
+#   "userId":"34",
+#   "receiverId":"44"
+# }
+
+
+
+
+
+
+
+
+
+
+
+# PUT http://localhost:4000/api/message/updateMessage
+# Content-Type: application/json
+
+# {
+#   "messageId":"b3f84749-6a8e-4909-b0a8-2171db7fd47e",
+#   "reaction":{"emoji":"😂","reactedUser":"34"},
+#   "notifyUserId":"44"
+# }
+
+
+
+
+
+
+
+
+
+
+POST http://localhost:4000/api/message/sendMessage
 Content-Type: application/json
 
 {
-  "adId":12
+  "chatId":"39f0ae05-b2a5-4f5e-9f72-28cc5a255812",
+  "messageId":"b3f84749-6a8e-4909-b0a8-2171sdb7fd44e",
+  "message":"whats upppppp nigga",
+  "sentBy":"34",
+  "replyingMessageId":null,
+  "reaction":null,
+  "receiverId":"44",
+  "createdAt": "2025-10-18T17:44:22.023Z"
 }

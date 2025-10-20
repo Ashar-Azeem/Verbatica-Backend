@@ -74,6 +74,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.user_id = $1 AND p.post_id < $3
@@ -97,6 +98,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.user_id = $1 
@@ -254,6 +256,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.news_id =$1
@@ -298,6 +301,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users_following uf ON p.user_id = uf.following_id AND uf.follower_id = $1 AND p.post_id < $2
@@ -321,6 +325,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users_following uf ON p.user_id = uf.following_id AND uf.follower_id = $1 
@@ -388,6 +393,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) AND p.user_id!=$2
@@ -434,6 +440,7 @@ const postModel = {
                 p.clusters,
                 u."userName",
                 u."avatarId",
+                u.public_key,
                 v.value AS user_vote,
                 (
                     (p.total_click + (p.total_upvotes * 2))::float 
@@ -510,6 +517,7 @@ const postModel = {
                     p.clusters,
                     u."userName",
                     u."avatarId",
+                    u.public_key,
                     v.value AS user_vote
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) 
@@ -553,7 +561,8 @@ class Post {
         clusters,
         userName,
         avatarId,
-        user_vote
+        user_vote,
+        public_key,
     }) {
         this.id = post_id;
         this.name = userName;
@@ -571,6 +580,7 @@ class Post {
         this.clusters = clusters;
         this.isUpVote = user_vote === true;
         this.isDownVote = user_vote === false;
+        this.public_key = public_key;
     }
 
     toJSON() {
@@ -590,7 +600,8 @@ class Post {
             isDownVote: this.isDownVote,
             comments: this.comments,
             uploadTime: this.uploadTime.toISOString(),
-            clusters: this.clusters
+            clusters: this.clusters,
+            public_key: this.public_key,
         };
     }
 }

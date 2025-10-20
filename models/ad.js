@@ -37,11 +37,9 @@ const adsModel = {
             )
             AND
             (NOW() <= a.upload_date + (a.plan * INTERVAL '1 day'))
-
             `;
 
             const { rows } = await postgres.query(query, [userId]);
-
 
 
             let history = [];

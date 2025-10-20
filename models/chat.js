@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
 const chatSchema = new mongoose.Schema(
     {
@@ -11,12 +11,6 @@ const chatSchema = new mongoose.Schema(
         participantIds: {
             type: [Number],
             required: true,
-        },
-
-        secretKeys: {
-            type: Map,
-            of: String,
-            default: {},
         },
 
         publicKeys: {
@@ -58,4 +52,5 @@ const chatSchema = new mongoose.Schema(
     }
 );
 
-export default mongoose.model("Chat", chatSchema);
+const chatModel = mongoose.model("Chat", chatSchema);
+module.exports = chatModel;

@@ -1,8 +1,7 @@
 const express = require('express');
 const userModel = require('../models/user');
 const relationshipModel = require('../models/relationship');
-const postModel = require('../models/post');
-
+const chatModel = require('../models/chat');
 
 const router = express.Router();
 
@@ -16,6 +15,10 @@ router.put('/updateAvatarId', async (req, res) => {
         if (!user) {
             return res.status(400).json({ error: 'Failed to update the avatar' });
         }
+        await chatModel.updateMany(
+            { participantIds: userId },
+            { $set: { [`userProfiles.${userId}`]: avatarId } }
+        );
 
         return res.status(200).json({ message: 'successfull', user: user });
 

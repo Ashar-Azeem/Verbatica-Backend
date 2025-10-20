@@ -160,8 +160,10 @@ router.post('/continueWithGoogle', async (req, res) => {
         //Meaning that if user already exists and isVerified then even if they registered old school way the account will be merged.
         let user = await userModel.ContinueWithGoogle(email);
 
+
         if (user) {
-            return res.status(200).json({ message: 'Complete', user: user });
+            const key = await userModel.getPrivateKey(user.id);
+            return res.status(200).json({ message: 'Complete', user: user, privateKey: key.private_key });
         }
 
         const userName = generateUniqueGoofyName();
@@ -171,7 +173,7 @@ router.post('/continueWithGoogle', async (req, res) => {
         }
 
 
-        return res.status(200).json({ message: 'Partial', user: user });
+        return res.status(200).json({ message: 'Partial', user: user, privateKey: null });
 
     } catch (e) {
         res.status(500).json({ message: 'error', error: 'Something went wrong while signing in through google' });
@@ -185,7 +187,8 @@ router.post('/continueWithGoogle/CompletedInfo', async (req, res) => {
         const { user, publicKey, privateKey } = req.body;
 
         const newUser = await userModel.CompleteSignUpWithGoogle(user, publicKey, privateKey);
-        return res.status(200).json({ message: 'Successful', user: newUser });
+
+        return res.status(200).json({ message: 'Successful', user: newUser, privateKey: privateKey });
 
 
 
