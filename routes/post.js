@@ -119,9 +119,9 @@ router.get("/followingPosts", async (req, res) => {
 router.get("/forYou", async (req, res) => {
     try {
         const { userId, lastPost, page, vector } = req.body;
+        const history = await postModel.getHistoryPosts(userId);
         if (!vector) {
             //fetch the history posts
-            const history = await postModel.getHistoryPosts(userId);
             if (history.length == 0) {
                 //fetch the trending posts for the first page 
                 const posts = await postModel.getTrendingPosts(page, userId);
@@ -137,7 +137,7 @@ router.get("/forYou", async (req, res) => {
             }
         } else {
             //page greater then 1 so vector is already made
-            const result = await postModel.getForYouPosts(userId, [], lastPost, page, vector);
+            const result = await postModel.getForYouPosts(userId, history, lastPost, page, vector);
             //Get one ad:
             const adResult = await adModel.getAd(userId, page, vector);
 

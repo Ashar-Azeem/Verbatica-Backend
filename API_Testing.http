@@ -35,16 +35,12 @@
 
 
 
-POST http://localhost:4000/api/message/sendMessage
+POST http://127.0.0.1:8000/classify
 Content-Type: application/json
 
+
 {
-  "chatId":"39f0ae05-b2a5-4f5e-9f72-28cc5a255812",
-  "messageId":"b3f84749-6a8e-4909-b0a8-2171sdb7fd44e",
-  "message":"whats upppppp nigga",
-  "sentBy":"34",
-  "replyingMessageId":null,
-  "reaction":null,
-  "receiverId":"44",
-  "createdAt": "2025-10-18T17:44:22.023Z"
+  "comment": "The army only shows up when they want to control everything.",
+  "clusters": ["criticize army", "supports army", "neutral"]
 }
+
