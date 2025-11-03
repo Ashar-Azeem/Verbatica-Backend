@@ -13,6 +13,8 @@ const adsRoute = require('./routes/ad');
 const businessOwnerRoute = require('./routes/business_owner');
 const chatRoute = require('./routes/chat');
 const messageRoute = require('./routes/message');
+const reportRoute = require('./routes/report');
+const notificationRoute = require('./routes/message');
 const newsCronJob = require('./jobs/fetchNews.js');
 const { initElasticsearch } = require('./services/Elastic_Search/init');
 
@@ -23,7 +25,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
 
@@ -81,6 +83,8 @@ app.use('/api/chat', chatRoute);
 app.use('/api/message', messageRoute);
 app.use('/api/ads', adsRoute);
 app.use('/api/businessOwner', businessOwnerRoute);
+app.use('/api/notification', notificationRoute);
+app.use('/api/report', reportRoute);
 
 app.use((err, req, res, next) => {
   console.error("🔥 Unhandled error:", err);
