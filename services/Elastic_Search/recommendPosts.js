@@ -58,7 +58,7 @@ async function recommendPosts(history, k = 10, page = 1, lastDoc = undefined, ve
     const searchRes = await esClient.search({
         index: "posts",
         size: k,
-        min_score: 0.3,
+        min_score: 0.2,
         query: {
             knn: {
                 field: "embeddings",

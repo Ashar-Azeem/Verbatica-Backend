@@ -1,16 +1,58 @@
-# PUT http://localhost:4000/api/message/updateSeenStatus
+# POST http://localhost:4000/api/comment/addComment
 # Content-Type: application/json
 
 # {
-#   "chatId":"598a279f-aec5-48d4-90a5-d5446c54d0d1",
-#   "userId":"34",
-#   "receiverId":"44"
+#   "postId": 1,
+#   "titleOfThePost": "The Future of AI in Healthcare",
+#   "text": "Even if that’s true, maintaining order was their duty. It’s not black and white.",
+#   "author": "Ashar Azeem",
+#   "profile": "1",
+#   "commenterGender": "Male",
+#   "commenterCountry": "Pakistan",
+#   "heirarchyOfCommments":{
+#   "text": "The military’s involvement was justified given the chaos at the border.",
+#   "replies": [
+#     {
+#       "text": "Justified? They used excessive force on unarmed civilians!",
+#       "replies": [
+#         {
+#           "text": "You’re exaggerating. The civilians were throwing stones and blocking aid trucks.",
+#           "replies": [
+#           ]
+          
+#         }
+#       ]
+#     }
+#   ]
+# }
+# ,
+#   "parentId": "690b7bee220615953b2bf1c1",
+#   "clusters": ["withMilitary", "againstMilitary", "neutral"],
+#   "uploadTime": "2025-11-05T14:30:00.000Z",
+#   "userId": 40
 # }
 
 
 
 
+GET http://localhost:4000/api/comment/getCommentsOfPost
+Content-Type: application/json
 
+{
+  "userId":41,
+  "postId":1,
+  "clusterName":null
+  }
+
+
+# PUT http://localhost:4000/api/comment/updateVote
+# Content-Type: application/json
+
+# {
+#   "commentId":"690b823794880c74f5f6e712",
+#   "userId":41,
+#   "type":"upvote"
+#   }
 
 
 
@@ -35,12 +77,12 @@
 
 
 
-POST http://127.0.0.1:8000/classify
-Content-Type: application/json
+# POST http://127.0.0.1:8000/classify
+# Content-Type: application/json
 
 
-{
-  "comment": "The army only shows up when they want to control everything.",
-  "clusters": ["criticize army", "supports army", "neutral"]
-}
+# {
+#   "comment": "The army only shows up when they want to control everything.",
+#   "clusters": ["criticize army", "supports army", "neutral"]
+# }
 

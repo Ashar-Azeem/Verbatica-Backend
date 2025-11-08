@@ -124,6 +124,15 @@ const postModel = {
             console.log(e);
         }
     },
+    async updateCommentCountInPost(postId) {
+        try {
+            const { postgres } = await connectAll();
+            await postgres.query(`UPDATE posts SET total_comments=total_comments+1
+            WHERE post_id=$1`, [postId]);
+        } catch (e) {
+            throw new Error(e);
+        }
+    },
 
     async voteOnPost(postId, userId, newVote) {
         const { postgres } = await connectAll();

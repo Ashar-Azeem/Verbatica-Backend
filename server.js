@@ -14,13 +14,15 @@ const businessOwnerRoute = require('./routes/business_owner');
 const chatRoute = require('./routes/chat');
 const messageRoute = require('./routes/message');
 const reportRoute = require('./routes/report');
-const notificationRoute = require('./routes/message');
+const notificationRoute = require('./routes/notification');
+const commentRoute = require('./routes/comment');
 const newsCronJob = require('./jobs/fetchNews.js');
 const { initElasticsearch } = require('./services/Elastic_Search/init');
 
 const app = express();
 const server = http.createServer(app);
 
+app.use(cors());
 
 const io = new Server(server, {
   cors: {
@@ -28,6 +30,7 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
+
 
 //Keeps track of all the online user 
 let onlineUsers = new Map();
@@ -72,7 +75,6 @@ app.set("io", io);
 // Middleware
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
-app.use(cors());
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -84,6 +86,7 @@ app.use('/api/message', messageRoute);
 app.use('/api/ads', adsRoute);
 app.use('/api/businessOwner', businessOwnerRoute);
 app.use('/api/notification', notificationRoute);
+app.use('/api/comment', commentRoute);
 app.use('/api/report', reportRoute);
 
 app.use((err, req, res, next) => {

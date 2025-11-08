@@ -255,6 +255,19 @@ const UserModel = {
         }
     },
 
+    async updateAura(userId, auraChange) {
+        try {
+            const { postgres } = await connectAll();
+
+            const user = await postgres.query(`UPDATE users SET aura= aura + $1
+             WHERE id=$2
+             RETURNING *`, [auraChange, userId]);
+            return user.rows[0];
+        } catch (e) {
+            throw Error(e);
+        }
+    },
+
 
     async updateAvatarId(userId, avatarId) {
         try {
