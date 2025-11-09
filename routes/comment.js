@@ -318,6 +318,97 @@ router.put("/updateVote", async (req, res) => {
     }
 });
 
+router.get("/getTotalClusterInfo", async (req, res) => {
+    try {
+        const { postId, clusters } = req.body;
+        const numericPostId = Number(postId);
+
+        const clusterStats = await commentModel.aggregate([
+            { $match: { postId: numericPostId } },
+            {
+                $group: {
+                    _id: "$cluster",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const clusterMap = {};
+        clusterStats.forEach(item => {
+            clusterMap[item._id || "Unassigned"] = item.count;
+        });
+
+        const finalClusterStats = clusters.map(cluster => ({
+            cluster,
+            count: clusterMap[cluster] || 0,
+        }));
+
+        const totalComments = await commentModel.countDocuments({ postId: numericPostId });
+
+        res.status(200).json({
+            postId: numericPostId,
+            totalComments,
+            clusterWiseCount: finalClusterStats,
+        });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching clusters info" });
+    }
+});
+
+router.get("/getAnalytics", async (req, res) => {
+    try {
+        const { postId, cluster } = req.body;
+
+
+        const numericPostId = Number(postId);
+
+        const matchFilter = { postId: numericPostId, cluster: cluster };
+
+
+        const emotions = ["Happy", "Sad", "Angry", "Neutral"];
+        const emotionAggregation = await commentModel.aggregate([
+            { $match: matchFilter },
+            { $group: { _id: "$emotionalTone", count: { $sum: 1 } } },
+        ]);
+        const emotionStats = emotions.map(emotion => {
+            const found = emotionAggregation.find(e => e._id === emotion);
+            return { emotion, count: found ? found.count : 0 };
+        });
+
+        const countryAggregation = await commentModel.aggregate([
+            { $match: matchFilter },
+            { $group: { _id: "$commenterCountry", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+        ]);
+        const countryStats = countryAggregation.map(c => ({
+            country: c._id,
+            count: c.count,
+        }));
+
+        const genders = ["Male", "Female"];
+        const genderAggregation = await commentModel.aggregate([
+            { $match: matchFilter },
+            { $group: { _id: "$commenterGender", count: { $sum: 1 } } },
+        ]);
+        const genderStats = genders.map(gender => {
+            const found = genderAggregation.find(g => g._id === gender);
+            return { gender, count: found ? found.count : 0 };
+        });
+
+        res.status(200).json({
+            postId: numericPostId,
+            emotions: emotionStats,
+            countries: countryStats,
+            genders: genderStats,
+        });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching the analytics" });
+    }
+});
+
 
 module.exports = router;
 

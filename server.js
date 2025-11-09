@@ -22,7 +22,12 @@ const { initElasticsearch } = require('./services/Elastic_Search/init');
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 const io = new Server(server, {
   cors: {

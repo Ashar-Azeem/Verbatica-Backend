@@ -2,6 +2,7 @@ const express = require('express');
 const userModel = require('../models/user');
 const relationshipModel = require('../models/relationship');
 const chatModel = require('../models/chat');
+const commentModel = require('../models/comment');
 
 const router = express.Router();
 
@@ -18,6 +19,11 @@ router.put('/updateAvatarId', async (req, res) => {
         await chatModel.updateMany(
             { participantIds: userId },
             { $set: { [`userProfiles.${userId}`]: avatarId } }
+        );
+
+        await commentModel.updateMany(
+            { userId: userId },
+            { profile: avatarId }
         );
 
         return res.status(200).json({ message: 'successfull', user: user });
