@@ -2,14 +2,14 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINIKEY);
-const MODEL = "gemini-2.0-flash-lite";
+const MODEL = "gemini-2.5-flash-lite";
 
-async function generateSummaryPrompt(comments, postType = "non_polarized") {
+async function generateSummaryPrompt(comments, postType = "non_polarized", cluster) {
     const commentsText = comments.map((c) => `- ${c}`).join("\n");
 
     return postType === "polarized"
         ? `You are an analytical summarizer. Summarize these user comments about a polarized topic. 
-                     Write a concise paragraph capturing key opinions and recurring arguments.
+                     Write a concise paragraph capturing key opinions and recurring arguments of cluster: ${cluster}.
                      Comments:
                      ${commentsText}
                        Final Summary (no intro text):`
@@ -21,13 +21,13 @@ async function generateSummaryPrompt(comments, postType = "non_polarized") {
                         Final Bullet-point Summary (no intro text):`;
 }
 
-async function updateSummaryPrompt(oldSummary, newComments, postType = "non_polarized") {
+async function updateSummaryPrompt(oldSummary, newComments, postType = "non_polarized", cluster) {
     const commentsText = newComments.map((c) => `- ${c}`).join("\n");
 
     return postType === "polarized"
         ? `You are an analytical summarizer updating a polarized discussion summary.
                      You are given an existing summary and new user comments.
-                     Merge key arguments, opinions, and sentiments from the new comments into the summary.
+                     Merge key arguments, opinions, and sentiments from the new comments into the summary of cluster: ${cluster}.
                     Preserve all major viewpoints and avoid repetition.
                     Previous Summary:
                     ${oldSummary}
@@ -44,12 +44,12 @@ async function updateSummaryPrompt(oldSummary, newComments, postType = "non_pola
                     Updated Summary (no intro text):`;
 }
 
-async function summarizeOrUpdate({ oldSummary, newComments, postType }) {
+async function summarizeOrUpdate(oldSummary, newComments, postType, cluster) {
     const model = genAI.getGenerativeModel({ model: MODEL });
 
     const prompt = oldSummary
-        ? await updateSummaryPrompt(oldSummary, newComments, postType)
-        : await generateSummaryPrompt(newComments, postType);
+        ? await updateSummaryPrompt(oldSummary, newComments, postType, cluster)
+        : await generateSummaryPrompt(newComments, postType, cluster);
 
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
@@ -90,7 +90,7 @@ module.exports = summarizeOrUpdate;
 
 
 // (async () => {
-//     const summary = await summarizeOrUpdate({ oldSummary: null, newComments });
+//     const summary = await summarizeOrUpdate(null, newComments);
 //     console.log("\n🆕 Updated Summary:\n", summary);
 // })();
 

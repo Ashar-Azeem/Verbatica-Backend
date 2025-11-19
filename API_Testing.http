@@ -35,24 +35,39 @@
 
 
 
-GET http://localhost:4000/api/comment/getCommentsOfPost
-Content-Type: application/json
-
-{
-  "userId":41,
-  "postId":1,
-  "clusterName":null
-  }
-
-
-# PUT http://localhost:4000/api/comment/updateVote
+# POST http://localhost:4000/api/comment/addComment
 # Content-Type: application/json
 
 # {
-#   "commentId":"690b823794880c74f5f6e712",
-#   "userId":41,
-#   "type":"upvote"
-#   }
+#   "postId": 30,
+#   "titleOfThePost": "Military Spending Debate",
+#   "text": "A balanced approach is better: maintain necessary defense but don’t overspend at the cost of citizens.",
+#   "author": "human-cattle-hLKi",
+#   "profile": 5,
+#   "commenterGender": "Female",
+#   "commenterCountry": "Pakistan",
+#   "parentId": null,
+#   "clusters": ["should increase the budget","should not increase the budget"],
+#   "uploadTime": "2025-11-12T18:09:00Z",
+#   "userId": 45,
+#   "parentComment": null
+# }
+
+
+
+
+
+
+
+
+
+GET http://localhost:4000/api/user/users
+Content-Type: application/json
+
+{
+  "userName":"MA"
+
+  }
 
 
 

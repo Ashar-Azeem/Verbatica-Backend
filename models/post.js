@@ -506,7 +506,57 @@ const postModel = {
         try {
             const { postgres } = await connectAll();
             const embeddings = await createEmbeddings([title + " " + description]);
-            const recommendation = await searchSimilarPosts(embeddings);
+            const recommendation = await searchSimilarPosts(embeddings, 0.8);
+            let postIds = [];
+            for (const post of recommendation) {
+                postIds.push(post.id);
+            }
+            const query = `SELECT 
+                    p.post_id,    
+                    p.title,
+                    p.description,
+                    p.image_link,
+                    p.video_link,
+                    p.is_debate,
+                    p.total_upvotes,
+                    p.total_downvotes,
+                    p.total_comments,
+                    p.upload_date,
+                    p.user_id,
+                    p.clusters,
+                    u."userName",
+                    u."avatarId",
+                    u.public_key,
+                    v.value AS user_vote
+                FROM posts p
+                JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) 
+                LEFT JOIN post_votes v 
+                    ON v.post_id = p.post_id AND v.user_id = $2 
+                ORDER BY array_position($1::int[], p.post_id)  
+                LIMIT 10
+
+                `;
+            const { rows } = await postgres.query(query,
+                [postIds, userId]
+            );
+
+            if (rows.length == 0) {
+                return [];
+            }
+            return rows.map(row => new Post({
+                ...row,
+            }));
+
+
+        } catch (e) {
+            console.log(e);
+        }
+    },
+    async getSearchedPosts(userId, postQuery) {
+        try {
+            const { postgres } = await connectAll();
+            const embeddings = await createEmbeddings([postQuery]);
+            const recommendation = await searchSimilarPosts(embeddings, 0.60);
             let postIds = [];
             for (const post of recommendation) {
                 postIds.push(post.id);
@@ -552,6 +602,92 @@ const postModel = {
             console.log(e);
         }
     },
+    async SavePosts(userId, postId, savedAt) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query(
+                `INSERT INTO saved_posts (user_id, post_id,saved_time)
+                    VALUES ($1, $2,$3)
+                    ON CONFLICT (user_id, post_id)
+                    DO NOTHING
+                    RETURNING 'post_saved' AS status`,
+                [userId, postId, savedAt]
+            );
+
+            if (result.rows.length === 0) {
+                return { status: 'already_saved' };
+            }
+            return result.rows[0];
+        } catch (e) {
+            console.log(e);
+        }
+    },
+
+    async getSavedPosts(userId) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query(
+                `Select 
+                p.post_id,    
+                p.title,
+                p.description,
+                p.image_link,
+                p.video_link,
+                p.is_debate,
+                p.total_upvotes,
+                p.total_downvotes,
+                p.total_comments,
+                p.upload_date,
+                p.user_id,
+                p.clusters,
+                u."userName",
+                u."avatarId",
+                u.public_key,
+                v.value AS user_vote
+                FROM saved_posts s
+                JOIN posts p on p.post_id=s.post_id AND s.user_id=$1
+                Join users u on p.user_id = u.id
+                LEFT JOIN post_votes v 
+                    ON v.post_id = p.post_id AND v.user_id = $1 
+                ORDER BY s.saved_time DESC
+                `,
+                [userId]
+            );
+
+            if (result.rows.length == 0) {
+                return [];
+            }
+            return result.rows.map(row => new Post({
+                ...row,
+            }));
+
+        } catch (e) {
+            console.log(e);
+        }
+    },
+    async unsavePost(userId, postId) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query(
+                `DELETE FROM saved_posts
+                 WHERE user_id = $1 AND post_id = $2`,
+                [userId, postId]
+            );
+
+            return { status: result.rowCount > 0 ? true : false };
+        } catch (e) {
+            new Error(e);
+        }
+    }
+
+
+
+
+
+
 
 }
 class Post {

@@ -193,9 +193,54 @@ router.get("/searchSimilarPosts", async (req, res) => {
     }
 });
 
+router.get('/searchedPosts', async (req, res) => {
+    try {
+        const { query, userId } = req.body;
+        const posts = await postModel.getSearchedPosts(userId, query);
+        return res.status(200).json({ message: 'successfull', posts: posts });
 
 
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching searched posts" });
+    }
+});
 
+router.post('/savePost', async (req, res) => {
+    try {
+        const { postId, userId, savedAt } = req.body;
+        const result = await postModel.SavePosts(userId, postId, savedAt);
+        return res.status(200).json({ message: 'successfull', status: result.status });
+
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching searched posts" });
+    }
+});
+
+router.get('/savePost', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const posts = await postModel.getSavedPosts(userId);
+        return res.status(200).json({ message: 'successfull', posts: posts });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while saving a post" });
+    }
+});
+router.delete('/savePost', async (req, res) => {
+    try {
+        const { userId, postId } = req.body;
+        const result = await postModel.unsavePost(userId, postId);
+        return res.status(200).json({ message: 'successfull', result: result });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while unsaving a post" });
+    }
+});
 
 
 module.exports = router;

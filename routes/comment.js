@@ -6,11 +6,11 @@ const postModel = require('../models/post');
 const decryptCommentMiddleware = require('../middleware/decryptComment');
 const classifyTopLevelComment = require('../services/ClassificationServices/parentCommentClassification');
 const classifyNestedComments = require("../services/ClassificationServices/nested_comment_classification");
-const { compareSync } = require('bcrypt');
+const handleCommentSummary = require('../services/Summary/updateOrCreateSummaries');
 const router = express.Router();
 
 
-router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
+router.post('/addComment', decryptCommentMiddleware,async (req, res) => {
     try {
         const {
             postId,
@@ -43,16 +43,21 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 const classifications = await classifyNestedComments(clusters, ["Happy", "Sad", "Angry", "Neutral"], hierarchy);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
+                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             } else {
                 //Top level comment:
                 const classifications = await classifyTopLevelComment(text, clusters);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.predicted_cluster, emotionalTone: classifications.tone, userId, parentId });
                 savedComment = await comment.save();
+                handleCommentSummary(postId, "polarized", clusters, classifications.predicted_cluster);
+
             }
         } else {
             //Non polarized comments:
             const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, userId, parentId });
             savedComment = await comment.save();
+            handleCommentSummary(postId, "non_polarized", [], null);
+
         }
 
         if (parentId) {

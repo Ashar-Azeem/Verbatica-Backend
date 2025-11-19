@@ -322,7 +322,21 @@ const UserModel = {
         } catch (err) {
             console.error(err);
         }
-    }
+    },
+    async searchUsers(searchTerm) {
+        const { postgres } = await connectAll();
+
+        const result = await postgres.query(
+            `SELECT *
+                FROM users
+                WHERE "userName" ILIKE $1 || '%'
+                ORDER BY "userName"
+                `,
+            [searchTerm]
+        );
+
+        return result.rows;
+    },
 
 
 

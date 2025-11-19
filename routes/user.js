@@ -140,6 +140,19 @@ router.delete('/deleteHistory', async (req, res) => {
     }
 });
 
+router.get('/users', async (req, res) => {
+    try {
+        const { userName } = req.body;
+        const users = await userModel.searchUsers(userName);
+        return res.status(200).json({ message: 'successfull', users: users });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching the users" });
+
+    }
+});
+
 
 
 

@@ -10,6 +10,7 @@ const userRoutes = require('./routes/user');
 const postRoute = require('./routes/post');
 const newsRoute = require('./routes/news');
 const adsRoute = require('./routes/ad');
+const summaryModel = require('./routes/summary');
 const businessOwnerRoute = require('./routes/business_owner');
 const chatRoute = require('./routes/chat');
 const messageRoute = require('./routes/message');
@@ -30,6 +31,8 @@ app.use(cors({
 
 
 const io = new Server(server, {
+  pingInterval: 20000,
+  pingTimeout: 25000,
   cors: {
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -89,6 +92,7 @@ app.use('/api/news', newsRoute);
 app.use('/api/chat', chatRoute);
 app.use('/api/message', messageRoute);
 app.use('/api/ads', adsRoute);
+app.use('/api/summary', summaryModel);
 app.use('/api/businessOwner', businessOwnerRoute);
 app.use('/api/notification', notificationRoute);
 app.use('/api/comment', commentRoute);

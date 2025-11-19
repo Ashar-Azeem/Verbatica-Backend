@@ -1,12 +1,12 @@
 const { esClient } = require("./init");
 
 
-async function searchPosts(vectorEmbedding) {
+async function searchPosts(vectorEmbedding, min_score) {
 
     const searchRes = await esClient.search({
         index: "posts",
         size: 10,
-        min_score: 0.8,
+        min_score: min_score,
         query: {
             knn: {
                 field: "embeddings",
