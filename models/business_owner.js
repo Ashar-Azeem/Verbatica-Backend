@@ -187,6 +187,21 @@ const businessOwnerModel = {
             console.error('Error updating owner_user:', err);
             throw err;
         }
+    },
+    async fetchBusinessOwnerViaId(id) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query('SELECT * FROM business_owner WHERE id=$1', [id]);
+
+
+            return result.rows[0];
+
+
+
+        } catch (e) {
+            throw new Error(e);
+        }
     }
 
 };

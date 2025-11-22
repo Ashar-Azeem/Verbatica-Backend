@@ -12,6 +12,13 @@ const relationshipModel = {
             ($1,$2)
              RETURNING *`, [followerId, followingId]);
 
+            await postgres.query(
+                `UPDATE users
+             SET aura= aura + $1
+             WHERE id = $2`,
+                [3, followingId]
+            );
+
             if (result.rowCount > 0) {
                 return true;
             } else {
@@ -28,6 +35,13 @@ const relationshipModel = {
             const { postgres } = await connectAll();
             const result = await postgres.query(
                 `DELETE FROM users_following WHERE follower_id = $1 AND "following_id"=$2`, [followerId, followingId]);
+
+            await postgres.query(
+                `UPDATE users
+             SET aura= aura + $1
+             WHERE id = $2`,
+                [-3, followingId]
+            );
             if (result.rowCount > 0) {
                 return true;
             } else {

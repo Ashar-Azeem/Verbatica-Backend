@@ -23,7 +23,7 @@ const adsModel = {
             o.brand_name,
             o.brand_avatar_location
             FROM ads a 
-            JOIN business_owner o ON a.owner_id=o.id AND a."isApproved"=TRUE
+            JOIN business_owner o ON a.owner_id=o.id AND a.status='approved'
             JOIN users u ON u.id = $1
             WHERE
             (
@@ -80,9 +80,9 @@ const adsModel = {
           total_impressions, 
           total_clicks, 
           owner_id,
-          "isApproved"
+          status
         ) VALUES (
-          $1, $2, $3, $4, NOW(), $5, $6, $7, $8, 0, 0, $9,TRUE
+          $1, $2, $3, $4, NOW(), $5, $6, $7, $8, 0, 0, $9,'pending'
         )
         RETURNING *;
       `;
@@ -123,7 +123,7 @@ const adsModel = {
             a.redirect_link,
             a.total_impressions,
             a.total_clicks,
-            a."isApproved",
+            a.status,
             o.brand_name,
             o.brand_avatar_location
             FROM ads a JOIN
@@ -160,7 +160,64 @@ const adsModel = {
         } catch (err) {
             console.error('Error deleting ad:', err);
         }
+    },
+
+    async updateAd(adId, title, description, imageUrl, videoUrl, redirectUrl) {
+        const { postgres } = await connectAll();
+
+        const query = `
+            UPDATE ads
+            SET 
+            title = $1,
+            description = $2,
+            image_url = COALESCE($3, image_url),
+            video_url = COALESCE($4, video_url),
+            redirect_link=$5,
+            status='pending'
+            WHERE ad_id = $6
+            RETURNING *;
+        `;
+
+        const values = [title, description, imageUrl, videoUrl, redirectUrl, adId];
+
+        try {
+            const result = await postgres.query(query, values);
+            return result.rows[0];
+        } catch (err) {
+            console.error('Error updating owner_user:', err);
+            throw err;
+        }
+    },
+
+    async updateAdStatus(adId, status) {
+        const { postgres } = await connectAll();
+
+        const query = `
+        UPDATE ads
+        SET status = $1
+        WHERE ad_id = $2
+        RETURNING ad_id;
+    `;
+
+        const values = [status, adId];
+
+        try {
+            const result = await postgres.query(query, values);
+
+            if (result.rowCount > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (err) {
+            console.error('Error updating ad status:', err);
+            return false; // Optional: return false on DB error
+        }
     }
+
+
+
+
 }
 
 

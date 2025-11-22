@@ -57,19 +57,13 @@
 
 
 
-
-
-
-
-GET http://localhost:4000/api/user/users
+GET http://localhost:4000/api/admin/reportedUsers 
 Content-Type: application/json
 
-{
-  "userName":"MA"
 
-  }
-
-
+{ 
+  "page":1 
+}
 
 
 

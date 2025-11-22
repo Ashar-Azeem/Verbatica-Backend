@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const commentModel = require('../models/comment');
 const userModel = require('../models/user');
 const postModel = require('../models/post');
+const notificationModel = require('../models/notification');
 const decryptCommentMiddleware = require('../middleware/decryptComment');
 const classifyTopLevelComment = require('../services/ClassificationServices/parentCommentClassification');
 const classifyNestedComments = require("../services/ClassificationServices/nested_comment_classification");
@@ -10,7 +11,7 @@ const handleCommentSummary = require('../services/Summary/updateOrCreateSummarie
 const router = express.Router();
 
 
-router.post('/addComment', decryptCommentMiddleware,async (req, res) => {
+router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
     try {
         const {
             postId,
@@ -24,7 +25,8 @@ router.post('/addComment', decryptCommentMiddleware,async (req, res) => {
             clusters,
             uploadTime,
             userId,
-            parentComment
+            parentComment,
+            parentCommentUserId
         } = req.body;
         let savedComment;
         if (clusters && clusters.length != 0) {
@@ -65,6 +67,7 @@ router.post('/addComment', decryptCommentMiddleware,async (req, res) => {
                 parentId,
                 { $push: { allReplies: savedComment._id } },
             )
+            notificationModel.addNotification(postId, savedComment._id, userId, parentCommentUserId, true, true, false, true, `${author} replied to your comment`, text);
         }
         const formattedComment = new Comment({
             id: savedComment._id,
@@ -84,7 +87,9 @@ router.post('/addComment', decryptCommentMiddleware,async (req, res) => {
             isUpvote: savedComment.isUpvote,
             isDownvote: savedComment.isDownvote,
             emotionalTone: savedComment.emotionalTone,
-            userId: userId
+            userId: userId,
+            authorId: savedComment.userId,
+
         });
         await postModel.updateCommentCountInPost(postId)
         res.status(200).json({ message: 'success', comment: formattedComment });
@@ -116,7 +121,9 @@ router.get('/getComments', async (req, res) => {
             isUpvote: comment.isUpvote,
             isDownvote: comment.isDownvote,
             emotionalTone: comment.emotionalTone,
-            userId: visitingUserId
+            userId: visitingUserId,
+            authorId: comment.userId,
+
         })));
 
         res.status(200).json({ message: 'success', comments: formattedComment });
@@ -173,7 +180,9 @@ router.get('/getCommentsOfPost', async (req, res) => {
             isUpvote: comment.isUpvote,
             isDownvote: comment.isDownvote,
             emotionalTone: comment.emotionalTone,
-            userId: userId
+            userId: userId,
+            authorId: comment.userId,
+
         })));
 
         res.status(200).json({ message: 'success', comments: formattedComment });
@@ -231,7 +240,8 @@ router.get('/getClusterComments', async (req, res) => {
             isUpvote: comment.isUpvote,
             isDownvote: comment.isDownvote,
             emotionalTone: comment.emotionalTone,
-            userId: userId
+            userId: userId,
+            authorId: comment.userId,
         })));
 
         res.status(200).json({ message: 'success', comments: formattedComment });
@@ -303,6 +313,9 @@ router.put("/updateVote", async (req, res) => {
 
         await comment.save({ session });
         await userModel.updateAura(comment.userId, auraChange);
+        if (comment.totalUpvotes % 5 === 0) {
+            await notificationModel.addNotification(comment.postId, commentId, userId, comment.userId, false, false, true, false, "5 new upvotes", `Your comment "${comment.text}" is gaining attention`);
+        }
         await session.commitTransaction();
         session.endSession();
 
@@ -441,8 +454,10 @@ class Comment {
         isDownvote,
         emotionalTone,
         userId,
+        authorId,
     }) {
         this.id = id;
+        this.authorId = authorId;
         this.postId = postId;
         this.titleOfThePost = titleOfThePost;
         this.text = text;
@@ -474,6 +489,7 @@ class Comment {
                         isDownvote: reply.isDownvote,
                         emotionalTone: reply.emotionalTone,
                         userId,
+                        authorId: reply.userId,
                     })
             )
             : [];
@@ -510,6 +526,7 @@ class Comment {
             isDownVote: this.isDownVote,
             emotionalTone: this.emotionalTone,
             allReplies: this.allReplies.map((r) => r.toJSON()),
+            userId: this.authorId,
         };
     }
 }

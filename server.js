@@ -16,6 +16,7 @@ const chatRoute = require('./routes/chat');
 const messageRoute = require('./routes/message');
 const reportRoute = require('./routes/report');
 const notificationRoute = require('./routes/notification');
+const adminRoute = require('./routes/admin');
 const commentRoute = require('./routes/comment');
 const newsCronJob = require('./jobs/fetchNews.js');
 const { initElasticsearch } = require('./services/Elastic_Search/init');
@@ -97,6 +98,7 @@ app.use('/api/businessOwner', businessOwnerRoute);
 app.use('/api/notification', notificationRoute);
 app.use('/api/comment', commentRoute);
 app.use('/api/report', reportRoute);
+app.use('/api/admin', adminRoute);
 
 app.use((err, req, res, next) => {
   console.error("🔥 Unhandled error:", err);

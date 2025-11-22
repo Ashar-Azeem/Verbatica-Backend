@@ -2,7 +2,7 @@ const connectAll = require('../Utilities/cloud/ConnectionToCloudResources');
 const searchSimilarPosts = require('../services/Elastic_Search/searchPosts');
 const recommendPosts = require('../services/Elastic_Search/recommendPosts');
 const createEmbeddings = require('../services/Elastic_Search/createEmbeddings');
-
+const notificationModel = require('./notification');
 
 const postModel = {
     async uploadAPost(title, description, image_link, video_link, is_debate, user_id, clusters, newsId) {
@@ -53,6 +53,65 @@ const postModel = {
             console.log(e);
         }
     },
+    async deletePost(postId) {
+        try {
+            const { postgres } = await connectAll();
+
+
+            const result = await postgres.query(
+                `DELETE FROM posts
+            WHERE post_id=$1`,
+                [postId]
+            );
+            return { status: result.rowCount > 0 ? true : false };
+
+
+        } catch (e) {
+            throw new Error(e);
+        }
+    },
+    async getPostWithId(postId, userId) {
+        try {
+            const { postgres } = await connectAll();
+
+
+            const result = await postgres.query(
+                `SELECT 
+                    p.post_id,    
+                    p.title,
+                    p.description,
+                    p.image_link,
+                    p.video_link,
+                    p.is_debate,
+                    p.total_upvotes,
+                    p.total_downvotes,
+                    p.total_comments,
+                    p.upload_date,
+                    p.user_id,
+                    p.clusters,
+                    u."userName",
+                    u."avatarId",
+                    u.public_key,
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                LEFT JOIN post_votes v 
+                    ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
+                WHERE p.post_id=$1
+                `,
+                [postId, userId]
+            );
+            console.log(result.rows[0]);
+            return new Post(result.rows[0]);
+
+
+        } catch (e) {
+            throw new Error(e);
+        }
+    },
 
     async getPosts(ownerUserId, visitingUserId, key) {
         try {
@@ -75,11 +134,15 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
+
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.user_id = $1 AND p.post_id < $3
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY p.upload_date DESC
                 LIMIT 10
                 `: `
@@ -99,11 +162,15 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
+
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.user_id = $1 
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY p.upload_date DESC
                 LIMIT 10
                 `;
@@ -137,7 +204,6 @@ const postModel = {
     async voteOnPost(postId, userId, newVote) {
         const { postgres } = await connectAll();
         const client = await postgres.connect();
-
         try {
             await client.query("BEGIN");
 
@@ -220,13 +286,17 @@ const postModel = {
             }
 
             // Now safely update post counters
-            await client.query(
+            const result = await client.query(
                 `UPDATE posts
              SET total_upvotes = total_upvotes + $1,
                  total_downvotes = total_downvotes + $2
-             WHERE post_id = $3`,
+             WHERE post_id = $3
+             RETURNING *;`
+                ,
                 [totalUpChange, totalDownChange, postId]
             );
+
+
 
             await client.query(
                 `UPDATE users
@@ -236,6 +306,13 @@ const postModel = {
             )
 
             await client.query("COMMIT");
+
+            //sending the notification after each 2 upvotes
+            const post = result.rows[0];
+            if (post.total_upvotes % 5 === 0) {
+                await notificationModel.addNotification(postId, null, userId, post.user_id, true, false,
+                    true, false, "5 new upvotes", `Your post "${post.title}" is gaining attention`);
+            }
         } catch (err) {
             await client.query("ROLLBACK");
             console.error("Vote update failed:", err);
@@ -266,11 +343,14 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.news_id =$1
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY p.upload_date DESC
                 `;
 
@@ -311,12 +391,15 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
                 FROM posts p
                 JOIN users_following uf ON p.user_id = uf.following_id AND uf.follower_id = $1 AND p.post_id < $2
                 JOIN users u on p.user_id=u.id
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $1 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$1
                 ORDER BY p.upload_date DESC
                 LIMIT 10
                 `: `SELECT 
@@ -335,12 +418,15 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
                 FROM posts p
                 JOIN users_following uf ON p.user_id = uf.following_id AND uf.follower_id = $1 
                 JOIN users u on p.user_id=u.id
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $1 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$1
                 ORDER BY p.upload_date DESC
                 LIMIT 10`;
 
@@ -403,11 +489,14 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) AND p.user_id!=$2
                 LEFT JOIN post_votes v 
-                    ON v.post_id = p.post_id AND v.user_id = $2 
+                    ON v.post_id = p.post_id AND v.user_id = $2
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY array_position($1::int[], p.post_id)  
                 LIMIT 10
 
@@ -454,11 +543,14 @@ const postModel = {
                 (
                     (p.total_click + (p.total_upvotes * 2))::float 
                     / GREATEST(EXTRACT(EPOCH FROM (NOW() - p.upload_date))/3600, 1)
-                ) AS hot_score
+                ) AS hot_score,
+                (s.post_id IS NOT NULL) AS is_saved
             FROM posts p
             JOIN users u ON p.user_id = u.id AND p.user_id!=$2
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2  
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
             ORDER BY hot_score DESC
             LIMIT 10 OFFSET (($1 - 1) * 10);
         `;
@@ -527,11 +619,15 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
+
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) 
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY array_position($1::int[], p.post_id)  
                 LIMIT 10
 
@@ -577,11 +673,14 @@ const postModel = {
                     u."userName",
                     u."avatarId",
                     u.public_key,
-                    v.value AS user_vote
+                    v.value AS user_vote,
+                    (s.post_id IS NOT NULL) AS is_saved
                 FROM posts p
                 JOIN users u ON p.user_id = u.id AND p.post_id= ANY($1) 
                 LEFT JOIN post_votes v 
                     ON v.post_id = p.post_id AND v.user_id = $2 
+                LEFT JOIN saved_posts s
+                    ON s.post_id=p.post_id AND s.user_id=$2
                 ORDER BY array_position($1::int[], p.post_id)  
                 LIMIT 10
 
@@ -645,7 +744,8 @@ const postModel = {
                 u."userName",
                 u."avatarId",
                 u.public_key,
-                v.value AS user_vote
+                v.value AS user_vote,
+                TRUE AS is_saved
                 FROM saved_posts s
                 JOIN posts p on p.post_id=s.post_id AND s.user_id=$1
                 Join users u on p.user_id = u.id
@@ -708,6 +808,7 @@ class Post {
         avatarId,
         user_vote,
         public_key,
+        is_saved
     }) {
         this.id = post_id;
         this.name = userName;
@@ -726,6 +827,7 @@ class Post {
         this.isUpVote = user_vote === true;
         this.isDownVote = user_vote === false;
         this.public_key = public_key;
+        this.isSaved = is_saved;
     }
 
     toJSON() {
@@ -747,6 +849,7 @@ class Post {
             uploadTime: this.uploadTime.toISOString(),
             clusters: this.clusters,
             public_key: this.public_key,
+            isSaved: this.isSaved,
         };
     }
 }

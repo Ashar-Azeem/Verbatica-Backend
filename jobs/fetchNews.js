@@ -53,7 +53,7 @@ async function fetchAllNews() {
 }
 
 // Run every midnight
-const newsCronJob = cron.schedule("* * * * *", async () => {
+const newsCronJob = cron.schedule("0 0 * * *", async () => {
     console.log("Fetching daily news...");
     await fetchAllNews();
 });

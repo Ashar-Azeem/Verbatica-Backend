@@ -136,6 +136,10 @@ const UserModel = {
         }
 
     },
+    async deleteUser(email) {
+        const { postgres } = await connectAll();
+        await postgres.query('DELETE FROM users WHERE email = $1', [email]);
+    },
 
 
     async deleteAndGetVerifiedUser(id, email, privateKey, publicKey) {
@@ -337,6 +341,32 @@ const UserModel = {
 
         return result.rows;
     },
+    async getUsers(page) {
+        const pageSize = 10
+        const offset = (page - 1) * pageSize;
+
+        const query = `
+        SELECT 
+            id AS "userId",
+            "userName",
+            "avatarId",
+            email,
+            "joinDate",
+            aura,
+            about AS bio
+        FROM users
+        ORDER BY "joinDate" DESC
+        LIMIT $2 OFFSET $1;
+    `;
+        const values = [offset, pageSize];
+
+        const { postgres } = await connectAll();
+        const result = await postgres.query(query, values);
+
+        return result.rows;
+    },
+
+
 
 
 

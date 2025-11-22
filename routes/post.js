@@ -79,6 +79,7 @@ router.get('/getPosts', async (req, res) => {
 router.put('/updateVotes', async (req, res) => {
     try {
         const { postId, userId, value } = req.body;
+
         await postModel.voteOnPost(postId, userId, value);
         return res.status(200).json({ message: 'successfull' });
 
@@ -241,6 +242,32 @@ router.delete('/savePost', async (req, res) => {
         res.status(500).json({ message: 'error', error: "Something went wrong while unsaving a post" });
     }
 });
+router.delete('/post', async (req, res) => {
+    try {
+        const { postId } = req.body;
+        const result = await postModel.deletePost(postId);
+        await insertIntoElasticSearch.deletePost(postId);
+        return res.status(200).json({ message: 'successfull', status: result.status });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while deleting the post" });
+    }
+});
+
+router.get('/post', async (req, res) => {
+    try {
+        const { postId, userId } = req.body;
+        console.log(userId);
+        const post = await postModel.getPostWithId(postId, userId);
+        return res.status(200).json({ message: 'successfull', post: post });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching the post" });
+    }
+});
+
 
 
 module.exports = router;
