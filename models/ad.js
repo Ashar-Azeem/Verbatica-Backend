@@ -211,9 +211,46 @@ const adsModel = {
             }
         } catch (err) {
             console.error('Error updating ad status:', err);
-            return false; // Optional: return false on DB error
+            return false;
         }
-    }
+    },
+    async getAdsForAdminByStatus(status) {
+        try {
+            const { postgres } = await connectAll();
+            const query = `
+            SELECT 
+            a.ad_id, 
+            a.title,
+            a.description,
+            a.countries,
+            a.genders,
+            a.upload_date,
+            a.plan,
+            a.image_url,
+            a.video_url,
+            a.redirect_link,
+            a.total_impressions,
+            a.total_clicks,
+            a.status,
+            o.brand_name,
+            o.brand_avatar_location,
+            o.email
+            FROM ads a JOIN
+            business_owner o ON a.owner_id=o.id
+            WHERE a.status=$1
+            ORDER BY a.upload_date DESC
+            `;
+            const { rows } = await postgres.query(query, [status]);
+            if (rows.length == 0) {
+                return [];
+            }
+
+            return rows;
+
+        } catch (e) {
+            console.log(e);
+        }
+    },
 
 
 

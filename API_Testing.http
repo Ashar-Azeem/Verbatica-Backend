@@ -57,12 +57,13 @@
 
 
 
-GET http://localhost:4000/api/admin/reportedUsers 
+GET http://localhost:4000/api/admin/analytics
 Content-Type: application/json
 
 
 { 
-  "page":1 
+
+
 }
 
 

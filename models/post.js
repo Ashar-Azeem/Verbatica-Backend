@@ -104,7 +104,6 @@ const postModel = {
                 `,
                 [postId, userId]
             );
-            console.log(result.rows[0]);
             return new Post(result.rows[0]);
 
 
@@ -237,9 +236,9 @@ const postModel = {
             if (voteRows.length === 0) {
                 // No previous vote → insert
                 await client.query(
-                    `INSERT INTO post_votes (post_id, user_id, value)
-                 VALUES ($1, $2, $3)`,
-                    [postId, userId, newVote]
+                    `INSERT INTO post_votes (post_id, user_id, value,voting_date)
+                 VALUES ($1, $2, $3,$4)`,
+                    [postId, userId, newVote, new Date()]
                 );
                 if (newVote) {
                     totalUpChange = 1;

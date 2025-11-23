@@ -86,5 +86,9 @@ const commentSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+
+//Needs improvement in the schema such as add the email address of the commenter too so extra calls are avoided for fetching reported comments
+//for admin.
+
 const commentModel = mongoose.model("Comment", commentSchema);
 module.exports = commentModel;
