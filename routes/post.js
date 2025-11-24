@@ -34,7 +34,7 @@ router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
         //Uploading the same post to the elastic search database for FOR YOU POSTS:
         await insertIntoElasticSearch.indexPost({ id: post.post_id, title: post.title, description: post.description, upload_at: post.upload_date });
         await postModel.registerView(userId, post.post_id);
-
+        console.log('here');
         res.status(200).json({
             message: 'successful',
             post: {
@@ -55,6 +55,7 @@ router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
                 comments: post.total_comments,
                 uploadTime: post.upload_date.toISOString(),
                 public_key: publicKey,
+                isSaved: false,
             }
         });
 
@@ -131,7 +132,7 @@ router.get("/forYou", async (req, res) => {
             } else {
                 //initial fetch so we have to make vector first
                 const result = await postModel.getForYouPosts(userId, history, lastPost, page, vector);
-                //Get one ad with each post:
+                //Get one ad with each post call:
                 const adResult = await adModel.getAd(userId, page, result.vector);
 
                 return res.status(200).json({ message: 'successfull', posts: result.posts, vector: result.vector, lastPost: result.lastPost, ad: adResult.ad });

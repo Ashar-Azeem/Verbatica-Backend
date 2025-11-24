@@ -57,11 +57,13 @@
 
 
 
-GET http://localhost:4000/api/admin/analytics
+GET https://seamus-dialectical-blusteringly.ngrok-free.dev/api/comment/getAnalytics
 Content-Type: application/json
 
 
 { 
+    "postId":25,
+    "cluster":"should not increase the budget"
 
 
 }

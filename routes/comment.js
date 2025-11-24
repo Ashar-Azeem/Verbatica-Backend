@@ -6,6 +6,7 @@ const postModel = require('../models/post');
 const notificationModel = require('../models/notification');
 const decryptCommentMiddleware = require('../middleware/decryptComment');
 const classifyTopLevelComment = require('../services/ClassificationServices/parentCommentClassification');
+const classifyTopLevelCommentV2 = require('../services/ClassificationServices/parentCommentClassificationV2');
 const classifyNestedComments = require("../services/ClassificationServices/nested_comment_classification");
 const handleCommentSummary = require('../services/Summary/updateOrCreateSummaries');
 const router = express.Router();
@@ -48,8 +49,9 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             } else {
                 //Top level comment:
-                const classifications = await classifyTopLevelComment(text, clusters);
-                const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.predicted_cluster, emotionalTone: classifications.tone, userId, parentId });
+                const classifications = await classifyTopLevelCommentV2(clusters, ["Happy", "Sad", "Angry", "Neutral"], text);
+                console.log(classifications);
+                const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
                 handleCommentSummary(postId, "polarized", clusters, classifications.predicted_cluster);
 
@@ -314,7 +316,7 @@ router.put("/updateVote", async (req, res) => {
         await comment.save({ session });
         await userModel.updateAura(comment.userId, auraChange);
         if (comment.totalUpvotes % 5 === 0) {
-            await notificationModel.addNotification(comment.postId, commentId, userId, comment.userId, false, false, true, false, "5 new upvotes", `Your comment "${comment.text}" is gaining attention`);
+            notificationModel.addNotification(comment.postId, commentId, userId, comment.userId, false, false, true, false, "5 new upvotes", `Your comment "${comment.text}" is gaining attention`);
         }
         await session.commitTransaction();
         session.endSession();
@@ -362,7 +364,6 @@ router.get("/getTotalClusterInfo", async (req, res) => {
         }));
 
         const totalComments = await commentModel.countDocuments({ postId: numericPostId });
-
         res.status(200).json({
             postId: numericPostId,
             totalComments,
@@ -414,11 +415,57 @@ router.get("/getAnalytics", async (req, res) => {
             return { gender, count: found ? found.count : 0 };
         });
 
+        const result = await commentModel.aggregate([
+            {
+                $match: {
+                    postId: postId,
+                    cluster: cluster,
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$uploadTime" },
+                        month: { $month: "$uploadTime" },
+                        day: { $dayOfMonth: "$uploadTime" },
+                    },
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $sort: {
+                    "_id.year": 1,
+                    "_id.month": 1,
+                    "_id.day": 1,
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    date: {
+                        $dateFromParts: {
+                            year: "$_id.year",
+                            month: "$_id.month",
+                            day: "$_id.day",
+                        },
+                    },
+                    count: 1,
+                },
+            },
+        ]);
+
+        // Convert array to object: { Date: count }
+        const formattedResult = {};
+        result.forEach((item) => {
+            formattedResult[item.date.toISOString().split("T")[0]] = item.count;
+        });
+
         res.status(200).json({
             postId: numericPostId,
             emotions: emotionStats,
             countries: countryStats,
             genders: genderStats,
+            clusterTrend: formattedResult,
         });
 
     } catch (e) {

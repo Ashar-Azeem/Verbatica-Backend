@@ -308,8 +308,9 @@ const postModel = {
 
             //sending the notification after each 2 upvotes
             const post = result.rows[0];
-            if (post.total_upvotes % 5 === 0) {
-                await notificationModel.addNotification(postId, null, userId, post.user_id, true, false,
+            if (post.total_upvotes > 0 && post.total_upvotes % 5 === 0 && postRows[0].total_upvotes < post.total_upvotes) {
+                console.log(post.total_upvotes);
+                notificationModel.addNotification(postId, null, userId, post.user_id, true, false,
                     true, false, "5 new upvotes", `Your post "${post.title}" is gaining attention`);
             }
         } catch (err) {
