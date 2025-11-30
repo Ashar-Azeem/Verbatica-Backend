@@ -12,29 +12,28 @@ const router = express.Router();
 router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
     try {
 
-        const { title, description, image, video, isDebate, userId, clusters, userName, avatarId, newsId, publicKey } = req.body;
+        const { title, description, image, video, isDebate, userId, clusters, userName, avatarId, newsId, publicKey, isAutomatedClusters } = req.body;
         let post;
 
         //image post
         if (image) {
             const result = await uploadBufferToCloudinary.uploadBufferToCloudinary(image, "verbatica's_images", 'image');
-            post = await postModel.uploadAPost(title, description, result.secure_url, null, isDebate, userId, clusters, newsId);
+            post = await postModel.uploadAPost(title, description, result.secure_url, null, isDebate, userId, clusters, newsId, isAutomatedClusters);
         }
         //video post
         else if (video) {
             const videoResult = await uploadBufferToCloudinary.uploadBufferToCloudinary(video, "verbatica's_videos", 'video');
-            post = await postModel.uploadAPost(title, description, null, videoResult.secure_url, isDebate, userId, clusters, newsId);
+            post = await postModel.uploadAPost(title, description, null, videoResult.secure_url, isDebate, userId, clusters, newsId, isAutomatedClusters);
 
         }
         //text post
         else {
-            post = await postModel.uploadAPost(title, description, null, null, isDebate, userId, clusters, newsId);
+            post = await postModel.uploadAPost(title, description, null, null, isDebate, userId, clusters, newsId, isAutomatedClusters);
         }
 
         //Uploading the same post to the elastic search database for FOR YOU POSTS:
         await insertIntoElasticSearch.indexPost({ id: post.post_id, title: post.title, description: post.description, upload_at: post.upload_date });
         await postModel.registerView(userId, post.post_id);
-        console.log('here');
         res.status(200).json({
             message: 'successful',
             post: {
@@ -53,6 +52,7 @@ router.post('/uploadPost', decryptPostMiddleware, async (req, res) => {
                 isUpVote: false,
                 isDownVote: false,
                 comments: post.total_comments,
+                isAutomatedClusters: isAutomatedClusters,
                 uploadTime: post.upload_date.toISOString(),
                 public_key: publicKey,
                 isSaved: false,

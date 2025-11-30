@@ -57,14 +57,12 @@
 
 
 
-GET https://seamus-dialectical-blusteringly.ngrok-free.dev/api/comment/getAnalytics
+GET https://seamus-dialectical-blusteringly.ngrok-free.dev/api/ads/getAds
 Content-Type: application/json
 
 
 { 
-    "postId":25,
-    "cluster":"should not increase the budget"
-
+    "brandOwnerId":6
 
 }
 

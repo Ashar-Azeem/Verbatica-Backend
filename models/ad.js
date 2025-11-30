@@ -132,7 +132,6 @@ const adsModel = {
             `;
 
             const { rows } = await postgres.query(query, [ownerUserId]);
-
             if (rows.length == 0) {
                 return [];
             }

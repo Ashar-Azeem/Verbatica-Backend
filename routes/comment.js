@@ -5,9 +5,8 @@ const userModel = require('../models/user');
 const postModel = require('../models/post');
 const notificationModel = require('../models/notification');
 const decryptCommentMiddleware = require('../middleware/decryptComment');
-const classifyTopLevelComment = require('../services/ClassificationServices/parentCommentClassification');
-const classifyTopLevelCommentV2 = require('../services/ClassificationServices/parentCommentClassificationV2');
-const classifyNestedComments = require("../services/ClassificationServices/nested_comment_classification");
+const classifyCommentToGivenClusters = require("../services/ClassificationServices/ClassifyCommentBasedOnCluster");
+const classifyCommentAutomatedClusters = require("../services/ClassificationServices/ClassifyCommentAutomated");
 const handleCommentSummary = require('../services/Summary/updateOrCreateSummaries');
 const router = express.Router();
 
@@ -17,6 +16,8 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
         const {
             postId,
             titleOfThePost,
+            descriptionOfThePost,
+            isAutomatedCluster,
             text,
             author,
             profile,
@@ -30,7 +31,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
             parentCommentUserId
         } = req.body;
         let savedComment;
-        if (clusters && clusters.length != 0) {
+        if (clusters && clusters.length != 0 && !isAutomatedCluster) {
             //Polarized nested comments:
             if (parentId) {
                 //Making a heirarchy:
@@ -43,19 +44,66 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                         }
                     ]
                 };
-                const classifications = await classifyNestedComments(clusters, ["Happy", "Sad", "Angry", "Neutral"], hierarchy);
+                const classifications = await classifyCommentToGivenClusters(clusters, ["Happy", "Sad", "Angry", "Neutral"], hierarchy);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
                 handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             } else {
                 //Top level comment:
-                const classifications = await classifyTopLevelCommentV2(clusters, ["Happy", "Sad", "Angry", "Neutral"], text);
-                console.log(classifications);
+                const classifications = await classifyCommentToGivenClusters(clusters, ["Happy", "Sad", "Angry", "Neutral"], text);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
-                handleCommentSummary(postId, "polarized", clusters, classifications.predicted_cluster);
-
+                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             }
+        } else if (isAutomatedCluster) {
+            //Automated Cluster Assignment
+            if (parentId) {
+                //Making a heirarchy:
+                const hierarchy = {
+                    text: parentComment,
+                    replies: [
+                        {
+                            text: text,
+                            replies: []
+                        }
+                    ]
+                };
+                const classifications = await classifyCommentAutomatedClusters({
+                    clusters: clusters, tones: ["Happy", "Sad", "Angry", "Neutral"],
+                    commentText: hierarchy, postTitle: titleOfThePost, postDescription: descriptionOfThePost
+                });
+                if (classifications.newCluster) {
+                    clusters.push(classifications.Cluster)
+                    postModel.updateCluster(clusters);
+                }
+                const comment = new commentModel({
+                    postId, titleOfThePost, text, author, profile, commenterGender,
+                    commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone,
+                    userId, parentId
+                });
+
+                savedComment = await comment.save();
+                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+            } else {
+                //Top level comment:
+                const classifications = await classifyCommentAutomatedClusters({
+                    clusters: clusters, tones: ["Happy", "Sad", "Angry", "Neutral"],
+                    commentText: text, postTitle: titleOfThePost, postDescription: descriptionOfThePost
+                });
+                if (classifications.newCluster) {
+                    clusters.push(classifications.Cluster)
+                    postModel.updateCluster(clusters);
+                }
+                const comment = new commentModel({
+                    postId, titleOfThePost, text, author, profile,
+                    commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster,
+                    emotionalTone: classifications.Tone, userId, parentId
+                });
+                savedComment = await comment.save();
+                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+            }
+
+
         } else {
             //Non polarized comments:
             const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, userId, parentId });

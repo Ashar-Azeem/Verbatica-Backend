@@ -5,7 +5,7 @@ const createEmbeddings = require('../services/Elastic_Search/createEmbeddings');
 const notificationModel = require('./notification');
 
 const postModel = {
-    async uploadAPost(title, description, image_link, video_link, is_debate, user_id, clusters, newsId) {
+    async uploadAPost(title, description, image_link, video_link, is_debate, user_id, clusters, newsId, is_automated_clusters) {
         try {
             const { postgres } = await connectAll();
             const query = `
@@ -21,12 +21,13 @@ const postModel = {
             upload_date,
             user_id,
             clusters,
-            news_id
+            news_id,
+            is_automated_clusters
         )
         VALUES (
             $1, $2, $3, $4, $5,
             $6, $7, $8, $9, $10,
-            $11, $12
+            $11, $12, $13
         )
         RETURNING *;
     `;
@@ -43,7 +44,8 @@ const postModel = {
                 new Date(),
                 user_id,
                 clusters,
-                newsId
+                newsId,
+                is_automated_clusters
             ];
 
             const result = await postgres.query(query, values);
@@ -89,6 +91,7 @@ const postModel = {
                     p.upload_date,
                     p.user_id,
                     p.clusters,
+                    p.is_automated_clusters,
                     u."userName",
                     u."avatarId",
                     u.public_key,
@@ -130,6 +133,7 @@ const postModel = {
                     p.upload_date,
                     p.user_id,
                     p.clusters,
+                    p.is_automated_clusters,
                     u."userName",
                     u."avatarId",
                     u.public_key,
@@ -157,6 +161,7 @@ const postModel = {
                     p.total_comments,
                     p.upload_date,
                     p.user_id,
+                    p.is_automated_clusters,
                     p.clusters,
                     u."userName",
                     u."avatarId",
@@ -195,6 +200,15 @@ const postModel = {
             const { postgres } = await connectAll();
             await postgres.query(`UPDATE posts SET total_comments=total_comments+1
             WHERE post_id=$1`, [postId]);
+        } catch (e) {
+            throw new Error(e);
+        }
+    },
+    async updateCluster(postId, clusters) {
+        try {
+            const { postgres } = await connectAll();
+            await postgres.query(`UPDATE posts SET clusters=$2
+            WHERE post_id=$1`, [postId, clusters]);
         } catch (e) {
             throw new Error(e);
         }
@@ -340,6 +354,7 @@ const postModel = {
                     p.upload_date,
                     p.user_id,
                     p.clusters,
+                    p.is_automated_clusters,
                     u."userName",
                     u."avatarId",
                     u.public_key,
@@ -387,6 +402,7 @@ const postModel = {
                     p.total_comments,
                     p.upload_date,
                     p.user_id,
+                    p.is_automated_clusters,
                     p.clusters,
                     u."userName",
                     u."avatarId",
@@ -413,6 +429,7 @@ const postModel = {
                     p.total_downvotes,
                     p.total_comments,
                     p.upload_date,
+                    p.is_automated_clusters,
                     p.user_id,
                     p.clusters,
                     u."userName",
@@ -486,6 +503,7 @@ const postModel = {
                     p.upload_date,
                     p.user_id,
                     p.clusters,
+                    p.is_automated_clusters,
                     u."userName",
                     u."avatarId",
                     u.public_key,
@@ -535,6 +553,7 @@ const postModel = {
                 p.total_comments,
                 p.upload_date,
                 p.user_id,
+                p.is_automated_clusters,
                 p.clusters,
                 u."userName",
                 u."avatarId",
@@ -615,6 +634,7 @@ const postModel = {
                     p.total_comments,
                     p.upload_date,
                     p.user_id,
+                    p.is_automated_clusters,
                     p.clusters,
                     u."userName",
                     u."avatarId",
@@ -669,6 +689,7 @@ const postModel = {
                     p.total_comments,
                     p.upload_date,
                     p.user_id,
+                    p.is_automated_clusters,
                     p.clusters,
                     u."userName",
                     u."avatarId",
@@ -740,6 +761,7 @@ const postModel = {
                 p.total_comments,
                 p.upload_date,
                 p.user_id,
+                p.is_automated_clusters,
                 p.clusters,
                 u."userName",
                 u."avatarId",
@@ -782,14 +804,10 @@ const postModel = {
             new Error(e);
         }
     }
-
-
-
-
-
-
-
 }
+
+
+
 class Post {
     constructor({
         post_id,
@@ -808,7 +826,8 @@ class Post {
         avatarId,
         user_vote,
         public_key,
-        is_saved
+        is_saved,
+        is_automated_clusters
     }) {
         this.id = post_id;
         this.name = userName;
@@ -822,6 +841,7 @@ class Post {
         this.upvotes = total_upvotes;
         this.downvotes = total_downvotes;
         this.comments = total_comments;
+        this.isAutomatedClusters = is_automated_clusters;
         this.uploadTime = new Date(upload_date);
         this.clusters = clusters;
         this.isUpVote = user_vote === true;
@@ -850,6 +870,7 @@ class Post {
             clusters: this.clusters,
             public_key: this.public_key,
             isSaved: this.isSaved,
+            isAutomatedClusters: this.isAutomatedClusters
         };
     }
 }

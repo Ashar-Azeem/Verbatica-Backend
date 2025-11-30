@@ -49,7 +49,7 @@ async function indexAd(ad) {
 
 
 
-    console.log(`Post ${ad.id} indexed successfully`);
+    console.log(`Ad ${ad.id} indexed successfully`);
 }
 
 async function updateAd(id, updates) {

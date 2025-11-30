@@ -31,8 +31,10 @@ router.post("/create-payment-intent", async (req, res) => {
 
 router.post("/postAdAfterConfirmation", async (req, res) => {
     try {
+
         const { title, description, countries, genders, plan, image, video, redirectLink, ownerId, brandName, brandAvatarLink } = req.body;
         let ad;
+
         //image ad
         if (image) {
             const result = await uploadBufferToCloudinary.uploadBufferToCloudinary(image, "verbatica's_images", 'image');
@@ -46,7 +48,6 @@ router.post("/postAdAfterConfirmation", async (req, res) => {
 
         //Uploading the same ad to the elastic search database for AD recommendation:
         await insertIntoElasticSearch.indexAd({ id: ad.ad_id, title: ad.title, description: ad.description });
-
         res.status(200).json({
             message: 'successful',
             ad: {
@@ -74,7 +75,6 @@ router.post("/postAdAfterConfirmation", async (req, res) => {
 });
 router.get("/getAds", async (req, res) => {
     try {
-
         const { brandOwnerId } = req.query;
         const ads = await adsModel.getAdsById(brandOwnerId);
         res.status(200).json({ message: "successful", ads: ads });
@@ -108,7 +108,6 @@ router.put('/editAd', async (req, res) => {
     try {
         const { adId, title, description, image, oldImageLink, video, oldVideoLink, redirectLink, brandName, brandAvatarLink } = req.body;
         let ad;
-        console.log(req.body);
 
         //updating image ad
         if (image) {

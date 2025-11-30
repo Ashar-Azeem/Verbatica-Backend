@@ -10,6 +10,7 @@ async function generateSummary(oldSummary, newComments, postType, cluster) {
 async function handleCommentSummary(postId, type, allNarratives = [], commentNarrative = null) {
   try {
     let postSummary = await Summary.findOne({ postId });
+    console.log(commentNarrative);
 
     if (!postSummary) {
       const summariesData =
@@ -43,6 +44,18 @@ async function handleCommentSummary(postId, type, allNarratives = [], commentNar
       targetSummary = postSummary.summaries.find(
         s => s.narrative === commentNarrative
       );
+
+      if (!targetSummary) {
+        console.log("⚠️ Cluster not found, creating new narrative entry...");
+
+        targetSummary = {
+          narrative: commentNarrative,
+          summary: null,
+          commentCount: 0,
+        };
+
+        postSummary.summaries.push(targetSummary);
+      }
     } else {
       targetSummary = postSummary.summaries[0];
     }
