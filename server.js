@@ -21,6 +21,7 @@ const commentRoute = require('./routes/comment');
 const newsCronJob = require('./jobs/fetchNews.js');
 const { initElasticsearch } = require('./services/Elastic_Search/init');
 
+
 const app = express();
 const server = http.createServer(app);
 

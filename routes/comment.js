@@ -47,13 +47,13 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 const classifications = await classifyCommentToGivenClusters(clusters, ["Happy", "Sad", "Angry", "Neutral"], hierarchy);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
-                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+                await handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             } else {
                 //Top level comment:
                 const classifications = await classifyCommentToGivenClusters(clusters, ["Happy", "Sad", "Angry", "Neutral"], text);
                 const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, cluster: classifications.Cluster, emotionalTone: classifications.Tone, userId, parentId });
                 savedComment = await comment.save();
-                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+                await handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             }
         } else if (isAutomatedCluster) {
             //Automated Cluster Assignment
@@ -74,7 +74,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 });
                 if (classifications.newCluster) {
                     clusters.push(classifications.Cluster)
-                    postModel.updateCluster(clusters);
+                    postModel.updateCluster(postId, clusters);
                 }
                 const comment = new commentModel({
                     postId, titleOfThePost, text, author, profile, commenterGender,
@@ -83,7 +83,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 });
 
                 savedComment = await comment.save();
-                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+                await handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             } else {
                 //Top level comment:
                 const classifications = await classifyCommentAutomatedClusters({
@@ -92,7 +92,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 });
                 if (classifications.newCluster) {
                     clusters.push(classifications.Cluster)
-                    postModel.updateCluster(clusters);
+                    postModel.updateCluster(postId, clusters);
                 }
                 const comment = new commentModel({
                     postId, titleOfThePost, text, author, profile,
@@ -100,7 +100,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                     emotionalTone: classifications.Tone, userId, parentId
                 });
                 savedComment = await comment.save();
-                handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
+                await handleCommentSummary(postId, "polarized", clusters, classifications.Cluster);
             }
 
 
@@ -108,7 +108,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
             //Non polarized comments:
             const comment = new commentModel({ postId, titleOfThePost, text, author, profile, commenterGender, commenterCountry, uploadTime, userId, parentId });
             savedComment = await comment.save();
-            handleCommentSummary(postId, "non_polarized", [], null);
+            await handleCommentSummary(postId, "non_polarized", [], null);
 
         }
 

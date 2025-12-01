@@ -10,7 +10,6 @@ async function generateSummary(oldSummary, newComments, postType, cluster) {
 async function handleCommentSummary(postId, type, allNarratives = [], commentNarrative = null) {
   try {
     let postSummary = await Summary.findOne({ postId });
-    console.log(commentNarrative);
 
     if (!postSummary) {
       const summariesData =
