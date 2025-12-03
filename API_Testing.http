@@ -57,12 +57,12 @@
 
 
 
-GET https://seamus-dialectical-blusteringly.ngrok-free.dev/api/ads/getAds
+GET https://verbatica-backend-production.up.railway.app/api/user/user
 Content-Type: application/json
 
 
 { 
-    "brandOwnerId":6
+    "userId":46
 
 }
 

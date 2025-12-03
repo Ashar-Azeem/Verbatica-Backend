@@ -1,26 +1,26 @@
-const classify = require("./services/ClassificationServices/ClassifyCommentAutomated");
 require('dotenv').config();
+const embedder = require('./services/Elastic_Search/createEmbeddings');
+const axios = require('axios');
+
+
+
 
 (async () => {
-    const singleComment = "At least some projects might get funded though.";
+    const post = {
+        title: "What should be done with these lgbtq people ??",
+        description: "These people are getting out of hand man"
+    }
+    const output = await embedder([post.title + " " + post.description]);
 
-    // 2️⃣ Nested comments (one leaf per request)
-    const nestedComment = {
-        text: "This government will never use the tax money honestly.",
-        replies: [
-            {
-                text: "I feel like they will use this money on the countries growth",
-                replies: []
-            }
-        ]
-    };
-    const results = await classify({
-        clusters: ['Budget & Infrastructure', 'Tax Spending Accountability'],
-        tones: ["Happy", "Sad", "Angry", "Neutral"], commentText: nestedComment,
-        postTitle: "Government Announces New Fuel Tax Increase Starting Next Month",
-        postDescription: "The finance ministry has approved a 12% rise in fuel taxes to offset budget deficits and fund public infrastructure projects."
 
+    const res = await axios.post("http://localhost:8000/embed", {
+        texts: [post.title + " " + post.description],
     });
-    console.log(results);
-})();
+    const output2 = res.data.embeddings[0];
 
+    console.log("The output:");
+    console.log(output);
+    console.log("The output 2:");
+    console.log(output2);
+
+})();
