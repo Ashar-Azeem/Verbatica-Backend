@@ -1,8 +1,7 @@
 const { Client } = require('@elastic/elasticsearch');
 
 const esClient = new Client({
-    //CHANGE THE IP TO THE CLOUD IP THAT WE WOULD BE USING
-    node: 'http://localhost:9200',
+    node: process.env.ELASTICSEARCHROUTE,
 });
 
 async function initElasticsearch() {
@@ -42,12 +41,12 @@ async function initElasticsearch() {
                             description: { type: "text", analyzer: "custom_english" },
                             upload_at: { type: "date" },
 
-                            // 🔹 New embeddings field
+
                             embeddings: {
                                 type: "dense_vector",
-                                dims: 384,   // MiniLM output dimension
-                                index: true, // allows ANN (approx nearest neighbor) search
-                                similarity: "cosine" // can be dot_product or l2_norm
+                                dims: 384,
+                                index: true,
+                                similarity: "cosine"
                             }
                         }
                     }

@@ -148,10 +148,25 @@ router.get('/users', async (req, res) => {
 
     } catch (e) {
         console.log(e);
-        res.status(500).json({ message: 'error', error: "Something went wrong while fetching the users" });
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching users" });
 
     }
 });
+
+router.get('/user', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const user = await userModel.getUserViaId(userId);
+        return res.status(200).json({ message: 'successfull', user: user });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while fetching the user" });
+
+    }
+});
+
+
 
 
 
