@@ -8,7 +8,7 @@ const createEmbeddings = async (post) => {
         inputs: post,
     });
 
-    return output;
+    return output[0];
 }
 
 module.exports = createEmbeddings;
