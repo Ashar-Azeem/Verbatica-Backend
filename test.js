@@ -19,8 +19,6 @@ const axios = require('axios');
     const output2 = res.data.embeddings[0];
 
     console.log("The output:");
-    console.log(output);
-    console.log("The output 2:");
-    console.log(output2);
+    console.log(output === output2);
 
 })();

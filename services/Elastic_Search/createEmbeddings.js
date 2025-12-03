@@ -6,6 +6,7 @@ const createEmbeddings = async (post) => {
     const output = await client.featureExtraction({
         model: "sentence-transformers/all-MiniLM-L6-v2",
         inputs: post,
+        provider: "hf-inference"
     });
 
     return output[0];
