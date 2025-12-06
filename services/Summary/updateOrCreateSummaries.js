@@ -50,13 +50,17 @@ async function handleCommentSummary(postId, type, allNarratives = [], commentNar
         targetSummary = {
           narrative: commentNarrative,
           summary: null,
-          commentCount: 0,
+          commentCount: 1,
         };
 
         postSummary.summaries.push(targetSummary);
+      } else {
+        targetSummary.commentCount += 1;
       }
     } else {
       targetSummary = postSummary.summaries[0];
+      targetSummary.commentCount += 1;
+
     }
 
     targetSummary.commentCount += 1;
