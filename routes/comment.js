@@ -72,7 +72,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                     clusters: clusters, tones: ["Happy", "Sad", "Angry", "Neutral"],
                     commentText: hierarchy, postTitle: titleOfThePost, postDescription: descriptionOfThePost
                 });
-                if (classifications.newCluster) {
+                if (!clusters.includes(classifications.Cluster)) {
                     clusters.push(classifications.Cluster)
                     await postModel.updateCluster(postId, classifications.Cluster);
                 }
@@ -90,7 +90,8 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                     clusters: clusters, tones: ["Happy", "Sad", "Angry", "Neutral"],
                     commentText: text, postTitle: titleOfThePost, postDescription: descriptionOfThePost
                 });
-                if (classifications.newCluster) {
+
+                if (!clusters.includes(classifications.Cluster)) {
                     clusters.push(classifications.Cluster)
                     await postModel.updateCluster(postId, classifications.Cluster);
                 }
