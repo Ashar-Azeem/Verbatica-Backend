@@ -90,10 +90,8 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                     clusters: clusters, tones: ["Happy", "Sad", "Angry", "Neutral"],
                     commentText: text, postTitle: titleOfThePost, postDescription: descriptionOfThePost
                 });
-                console.log(classifications);
                 if (classifications.newCluster) {
                     clusters.push(classifications.Cluster)
-                    console.log(clusters);
                     await postModel.updateCluster(postId, clusters);
                 }
                 const comment = new commentModel({
