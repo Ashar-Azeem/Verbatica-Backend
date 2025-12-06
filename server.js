@@ -115,7 +115,7 @@ const startServer = async () => {
 
   const PORT = process.env.Port || 4000;
 
-  server.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 };
