@@ -110,8 +110,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   await connectAll();
   await initElasticsearch();
-  // newsCronJob.start();
-  newsCronJob.stop();
+  newsCronJob.start();
 
   const PORT = process.env.Port || 4000;
 
