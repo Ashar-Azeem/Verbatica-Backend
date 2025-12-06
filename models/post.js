@@ -207,8 +207,13 @@ const postModel = {
     async updateCluster(postId, clusters) {
         try {
             const { postgres } = await connectAll();
-            await postgres.query(`UPDATE posts SET clusters=$2
+            const result = await postgres.query(`UPDATE posts SET clusters=$2
             WHERE post_id=$1`, [postId, clusters]);
+            if (result.rowCount === 0) {
+                console.warn(`Post ID ${postId} not found. No update performed.`);
+            } else {
+                console.log(`Successfully updated ${result.rowCount} row(s).`);
+            }
         } catch (e) {
             throw new Error(e);
         }
