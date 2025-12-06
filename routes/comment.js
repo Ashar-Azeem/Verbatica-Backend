@@ -74,7 +74,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 });
                 if (classifications.newCluster) {
                     clusters.push(classifications.Cluster)
-                    postModel.updateCluster(postId, clusters);
+                    await postModel.updateCluster(postId, clusters);
                 }
                 const comment = new commentModel({
                     postId, titleOfThePost, text, author, profile, commenterGender,
@@ -92,7 +92,7 @@ router.post('/addComment', decryptCommentMiddleware, async (req, res) => {
                 });
                 if (classifications.newCluster) {
                     clusters.push(classifications.Cluster)
-                    postModel.updateCluster(postId, clusters);
+                    await postModel.updateCluster(postId, clusters);
                 }
                 const comment = new commentModel({
                     postId, titleOfThePost, text, author, profile,
