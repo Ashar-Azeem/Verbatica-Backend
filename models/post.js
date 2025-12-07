@@ -680,7 +680,7 @@ const postModel = {
         try {
             const { postgres } = await connectAll();
             const embeddings = await createEmbeddings([postQuery]);
-            const recommendation = await searchSimilarPosts(embeddings, 0.60);
+            const recommendation = await searchSimilarPosts(embeddings, 0.65);
             let postIds = [];
             for (const post of recommendation) {
                 postIds.push(post.id);

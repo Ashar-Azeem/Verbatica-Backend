@@ -55,6 +55,13 @@ const adsModel = {
             }
             for (const ad of rows) {
                 if (ad.ad_id == result.ad.id) {
+                    const updateQuery = `
+                    UPDATE ads
+                    SET total_impressions = total_impressions + 1
+                    WHERE ad_id = $1;
+                `;
+
+                    await postgres.query(updateQuery, [ad.ad_id]);
                     return { vector: result.vector, ad: ad }
                 }
             }
