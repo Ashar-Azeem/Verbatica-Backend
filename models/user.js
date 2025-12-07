@@ -116,7 +116,7 @@ const UserModel = {
 
         try {
             const res = await postgres.query(query, values);
-            sendOTP(email, otp);
+            await sendOTP(email, otp);
         } catch (err) {
             console.error('Error during upsert:', err);
             throw new Error('Something went wrong while sending otp');
