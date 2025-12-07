@@ -13,6 +13,8 @@ const transporter = nodemailer.createTransport({
 
 async function sendMail(email, subject, text, html) {
     try {
+        console.log("📨 sendOTP CALLED for:", email, otp);
+
         let info;
         html ?
             info = await transporter.sendMail({
