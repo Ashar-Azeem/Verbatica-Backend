@@ -15,12 +15,12 @@ async function sendOTP(email, otp) {
     try {
         console.log("📨 sendOTP CALLED for:", email, otp);
 
-        const info = await transporter.sendMail({
-            from: '"Verbatica" <verbatica2025@gmail.com>',
-            to: email,
-            subject: 'Your OTP Code',
-            text: `Your OTP code is: ${otp}.`
-        });
+        // const info = await transporter.sendMail({
+        //     from: '"Verbatica" <verbatica2025@gmail.com>',
+        //     to: email,
+        //     subject: 'Your OTP Code',
+        //     text: `Your OTP code is: ${otp}.`
+        // });
 
         console.log('Message sent:', info.messageId);
     } catch (error) {

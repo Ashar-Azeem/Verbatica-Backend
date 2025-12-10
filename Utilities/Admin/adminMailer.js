@@ -15,20 +15,20 @@ async function sendMail(email, subject, text, html) {
     try {
         console.log("📨 sendOTP CALLED for:", email, otp);
 
-        let info;
-        html ?
-            info = await transporter.sendMail({
-                from: '"Verbatica" <verbatica2025@gmail.com>',
-                to: email,
-                subject: subject,
-                html: html
-            }) :
-            info = await transporter.sendMail({
-                from: '"Verbatica" <verbatica2025@gmail.com>',
-                to: email,
-                subject: subject,
-                text: text
-            });
+        // let info;
+        // html ?
+        //     info = await transporter.sendMail({
+        //         from: '"Verbatica" <verbatica2025@gmail.com>',
+        //         to: email,
+        //         subject: subject,
+        //         html: html
+        //     }) :
+        //     info = await transporter.sendMail({
+        //         from: '"Verbatica" <verbatica2025@gmail.com>',
+        //         to: email,
+        //         subject: subject,
+        //         text: text
+        //     });
 
 
         console.log('Message sent:', info.messageId);
