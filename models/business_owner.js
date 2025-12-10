@@ -10,6 +10,7 @@ const businessOwnerModel = {
             console.log(email, password, brandName, brandDescription, brandAvatarLoc);
             const { postgres } = await connectAll();
             const joinDate = new Date().toISOString().split('T')[0];
+
             const result = await postgres.query(
                 `INSERT INTO business_owner 
                 (email, password, brand_name, brand_description, brand_avatar_location, "isVerified",joined_since)
@@ -21,7 +22,7 @@ const businessOwnerModel = {
 
             return result.rows[0];
         } catch (e) {
-            throw new Error("Something went wrong while signing up");
+            throw new Error(e);
         }
     },
 
