@@ -1,10 +1,8 @@
 const { Client } = require('@elastic/elasticsearch');
 
 const esClient = new Client({
-    node: process.env.ELASTICSEARCHROUTECLOUD,
-    auth: {
-        apiKey: process.env.ELASTICSEARCH_API_KEY
-    }
+    node: process.env.ELASTICSEARCHROUTE,
+
 });
 
 async function initElasticsearch() {

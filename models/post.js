@@ -3,6 +3,7 @@ const searchSimilarPosts = require('../services/Elastic_Search/searchPosts');
 const recommendPosts = require('../services/Elastic_Search/recommendPosts');
 const createEmbeddings = require('../services/Elastic_Search/createEmbeddings');
 const notificationModel = require('./notification');
+const redis = require('../Utilities/cloud/Redis');
 
 const postModel = {
     async uploadAPost(title, description, image_link, video_link, is_debate, user_id, clusters, newsId, is_automated_clusters) {
@@ -221,129 +222,147 @@ const postModel = {
             throw new Error(e);
         }
     },
-
     async voteOnPost(postId, userId, newVote) {
         const { postgres } = await connectAll();
-        const client = await postgres.connect();
-        try {
-            await client.query("BEGIN");
 
-            // Lock both post row and (if exists) the user vote row
-            const { rows: postRows } = await client.query(
-                `SELECT post_id, total_upvotes, total_downvotes, user_id
-             FROM posts
-             WHERE post_id = $1
-             FOR UPDATE`,
-                [postId]
-            );
+        const voteKey = `user_vote:${postId}:${userId}`;
+        const bufferKey = `vote_buffer:${postId}`;
+        const pendingUsersKey = `pending_votes_users:${postId}`;
 
+        // 1. Check Redis (Syntax: .get)
+        let oldVoteStr = await redis.get(voteKey);
+        let oldVote;
 
-
-            if (postRows.length === 0) {
-                throw new Error("Post not found");
-            }
-
-            const { rows: voteRows } = await client.query(
-                `SELECT value
-             FROM post_votes
-             WHERE post_id = $1 AND user_id = $2
-             FOR UPDATE`,
+        if (oldVoteStr === null) {
+            const { rows } = await postgres.query(
+                "SELECT value FROM post_votes WHERE post_id = $1 AND user_id = $2",
                 [postId, userId]
             );
+            oldVote = rows.length > 0 ? (rows[0].value ? 1 : 0) : null;
 
-            let totalUpChange = 0;
-            let totalDownChange = 0;
-            let auraChange = 0;
-
-            if (voteRows.length === 0) {
-                // No previous vote → insert
-                await client.query(
-                    `INSERT INTO post_votes (post_id, user_id, value,voting_date)
-                 VALUES ($1, $2, $3,$4)`,
-                    [postId, userId, newVote, new Date()]
-                );
-                if (newVote) {
-                    totalUpChange = 1;
-                    auraChange = 1;
-                } else {
-                    totalDownChange = 1;
-                    auraChange = -1;
-                }
-            } else {
-                const oldVote = voteRows[0].value;
-
-                if (oldVote === newVote) {
-                    // Same vote → remove
-                    await client.query(
-                        `DELETE FROM post_votes
-                     WHERE post_id = $1 AND user_id = $2`,
-                        [postId, userId]
-                    );
-                    if (newVote) {
-                        totalUpChange = -1;
-                        auraChange = -1;
-                    } else {
-                        totalDownChange = -1;
-                        auraChange = +1;
-                    }
-                } else {
-                    // Different vote → update
-                    await client.query(
-                        `UPDATE post_votes
-                     SET value = $3
-                     WHERE post_id = $1 AND user_id = $2`,
-                        [postId, userId, newVote]
-                    );
-                    if (newVote) {
-                        totalUpChange = 1;
-                        totalDownChange = -1;
-                        auraChange = +2;
-                    } else {
-                        totalUpChange = -1;
-                        totalDownChange = 1;
-                        auraChange = -2;
-                    }
-                }
+            if (oldVote !== null) {
+                await redis.set(voteKey, oldVote.toString(), { EX: 86400 });
             }
-
-            // Now safely update post counters
-            const result = await client.query(
-                `UPDATE posts
-             SET total_upvotes = total_upvotes + $1,
-                 total_downvotes = total_downvotes + $2
-             WHERE post_id = $3
-             RETURNING *;`
-                ,
-                [totalUpChange, totalDownChange, postId]
-            );
-
-
-
-            await client.query(
-                `UPDATE users
-             SET aura= aura + $1
-             WHERE id = $2`,
-                [auraChange, postRows[0].user_id]
-            )
-
-            await client.query("COMMIT");
-
-            //sending the notification after each 2 upvotes
-            const post = result.rows[0];
-            if (post.total_upvotes > 0 && post.total_upvotes % 5 === 0 && postRows[0].total_upvotes < post.total_upvotes) {
-                console.log(post.total_upvotes);
-                notificationModel.addNotification(postId, null, userId, post.user_id, true, false,
-                    true, false, "5 new upvotes", `Your post "${post.title}" is gaining attention`);
-            }
-        } catch (err) {
-            await client.query("ROLLBACK");
-            console.error("Vote update failed:", err);
-            throw err;
-        } finally {
-            client.release();
+        } else {
+            oldVote = parseInt(oldVoteStr);
         }
 
+        const currentVoteInt = newVote ? 1 : 0;
+        let upDelta = 0, downDelta = 0, auraDelta = 0;
+
+        // 2. YOUR ORIGINAL LOGIC (Restored exactly as written)
+        if (oldVote === null) {
+            await redis.set(voteKey, currentVoteInt.toString(), { EX: 86400 });
+            if (newVote) { upDelta = 1; auraDelta = 1; }
+            else { downDelta = 1; auraDelta = -1; }
+        } else if (oldVote === currentVoteInt) {
+            await redis.del(voteKey);
+            if (newVote) { upDelta = -1; auraDelta = -1; }
+            else { downDelta = -1; auraDelta = 1; }
+        } else {
+            await redis.set(voteKey, currentVoteInt.toString(), { EX: 86400 });
+            if (newVote) { upDelta = 1; downDelta = -1; auraDelta = 2; }
+            else { upDelta = -1; downDelta = 1; auraDelta = -2; }
+        }
+
+        // 3. Update Redis Buffers (Syntax: .multi and CamelCase)
+        const pipeline = redis.multi();
+        pipeline.hIncrBy(bufferKey, 'up', upDelta);
+        pipeline.hIncrBy(bufferKey, 'down', downDelta);
+        pipeline.hIncrBy(bufferKey, 'aura', auraDelta);
+        pipeline.sAdd(pendingUsersKey, userId.toString());
+        pipeline.sAdd('dirty_posts', postId.toString());
+        await pipeline.exec();
+
+        // 4. Threshold Trigger (Syntax: .hGetAll)
+        const counts = await redis.hGetAll(bufferKey);
+        const totalActivity = Math.abs(parseInt(counts.up || 0)) + Math.abs(parseInt(counts.down || 0));
+        //Sync if total activity reaches threshold
+        if (totalActivity >= 5) {
+            this.syncVotesToPostgres(postId, userId).catch(console.error);
+        }
     },
+
+    async syncVotesToPostgres(postId, userId) {
+
+
+        const bufferKey = `vote_buffer:${postId}`;
+        const pendingUsersKey = `pending_votes_users:${postId}`;
+
+        const [changes, userIds] = await Promise.all([
+            redis.hGetAll(bufferKey),
+            redis.sMembers(pendingUsersKey)
+        ]);
+
+        if (!userIds.length) return;
+
+        // Syntax: .multi for batching
+        const pipe = redis.multi();
+        userIds.forEach(uId => pipe.get(`user_vote:${postId.toString()}:${uId.toString()}`));
+        const redisValues = await pipe.exec();
+
+        const upserts = [];
+        const deletes = [];
+        userIds.forEach((uId, i) => {
+            const val = redisValues[i];
+            if (val === null) deletes.push(uId);
+            else upserts.push({ id: uId, val: val === '1' });
+        });
+
+        const { postgres } = await connectAll();
+
+        try {
+            await postgres.query("BEGIN");
+
+            if (upserts.length > 0) {
+                await postgres.query(`
+                INSERT INTO post_votes (post_id, user_id, value, voting_date)
+                SELECT $1, unnest($2::integer[]), unnest($3::boolean[]), NOW()
+                ON CONFLICT (post_id, user_id) DO UPDATE SET value = EXCLUDED.value;
+            `, [postId, upserts.map(u => u.id), upserts.map(u => u.val)]);
+            }
+
+            if (deletes.length > 0) {
+                await postgres.query(`DELETE FROM post_votes WHERE post_id = $1 AND user_id = ANY($2)`, [postId, deletes]);
+            }
+
+            // YOUR ORIGINAL CTE QUERY (Kept exactly as requested)
+            const postRes = await postgres.query(`
+            WITH old_post AS (
+                SELECT total_upvotes FROM posts WHERE post_id = $3
+            )
+            UPDATE posts SET 
+                total_upvotes = total_upvotes + $1, 
+                total_downvotes = total_downvotes + $2 
+            WHERE post_id = $3 
+            RETURNING (SELECT total_upvotes FROM old_post) AS old_upvotes, 
+                        total_upvotes AS new_upvotes, title, user_id;
+        `, [parseInt(changes.up || 0), parseInt(changes.down || 0), postId]);
+
+            if (postRes.rows.length > 0) {
+                await postgres.query(`UPDATE users SET aura = aura + $1 WHERE id = $2`,
+                    [parseInt(changes.aura || 0), postRes.rows[0].user_id]);
+
+                // Send the notification if new upvotes reach a multiple of 5
+                if (postRes.rows[0].new_upvotes > 0 && postRes.rows[0].new_upvotes % 5 === 0 && postRes.rows[0].new_upvotes > postRes.rows[0].old_upvotes) {
+                    await notificationModel.addNotification(postId, null, userId, postRes.rows[0].user_id, true, false,
+                        true, false, "5 new upvotes", `Your post "${postRes.rows[0].title}" is gaining attention`);
+                }
+            }
+
+            await postgres.query("COMMIT");
+
+            await redis.del(bufferKey);
+            await redis.del(pendingUsersKey.toString());
+            await redis.sRem('dirty_posts', postId.toString());
+            console.log('successfully synced votes to Postgres');
+        } catch (e) {
+            await postgres.query("ROLLBACK");
+            console.error("Error syncing votes to Postgres:", e);
+            throw e;
+        }
+    },
+
     async getPostsWithInNews(newsId, ownerId) {
         try {
             const { postgres } = await connectAll();

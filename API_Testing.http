@@ -57,26 +57,26 @@
 
 
 
-GET https://verbatica-backend-production.up.railway.app/api/user/user
-Content-Type: application/json
-
-
-{ 
-    "userId":46
-
-}
-
-
-
-
-# PUT http://localhost:4000/api/message/updateMessage
+# GET https://verbatica-backend-production.up.railway.app/api/user/user
 # Content-Type: application/json
 
-# {
-#   "messageId":"b3f84749-6a8e-4909-b0a8-2171db7fd47e",
-#   "reaction":{"emoji":"😂","reactedUser":"34"},
-#   "notifyUserId":"44"
+
+# { 
+#     "userId":46
+
 # }
+
+
+
+
+PUT http://localhost:4000/api/post/updateVotes
+Content-Type: application/json
+
+{
+  "postId":25,
+  "userId":54,
+  "value":false
+}
 
 
 
