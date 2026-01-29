@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, gender, country } = req.body;
+        const { email, password, gender, country, fcmToken } = req.body;
 
         const doesExist = await userModel.userExists(email);
 
@@ -19,7 +19,7 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 12);
 
         const userName = generateUniqueGoofyName();
-        const user = await userModel.register(email, hashedPassword, userName, country, gender);
+        const user = await userModel.register(email, hashedPassword, userName, country, gender, fcmToken);
 
         const token = user.id;
 
@@ -76,8 +76,8 @@ router.post('/resendOTP', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
 
-        const { email, password } = req.body;
-        const user = await userModel.login(email);
+        const { email, password, fcmToken } = req.body;
+        const user = await userModel.login(email, fcmToken);
         if (!user) {
             return res.status(400).json({ error: 'Incorrect Credentials' });
         }
@@ -185,9 +185,9 @@ router.post('/continueWithGoogle', async (req, res) => {
 
 router.post('/continueWithGoogle/CompletedInfo', async (req, res) => {
     try {
-        const { user, publicKey, privateKey } = req.body;
+        const { user, publicKey, privateKey, fcmToken } = req.body;
 
-        const newUser = await userModel.CompleteSignUpWithGoogle(user, publicKey, privateKey);
+        const newUser = await userModel.CompleteSignUpWithGoogle(user, publicKey, privateKey, fcmToken);
 
         return res.status(200).json({ message: 'Successful', user: newUser, privateKey: privateKey });
 

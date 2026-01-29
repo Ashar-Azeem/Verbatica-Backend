@@ -229,7 +229,6 @@ const postModel = {
         const bufferKey = `vote_buffer:${postId}`;
         const pendingUsersKey = `pending_votes_users:${postId}`;
 
-        // 1. Check Redis (Syntax: .get)
         let oldVoteStr = await redis.get(voteKey);
         let oldVote;
 
@@ -250,7 +249,6 @@ const postModel = {
         const currentVoteInt = newVote ? 1 : 0;
         let upDelta = 0, downDelta = 0, auraDelta = 0;
 
-        // 2. YOUR ORIGINAL LOGIC (Restored exactly as written)
         if (oldVote === null) {
             await redis.set(voteKey, currentVoteInt.toString(), { EX: 86400 });
             if (newVote) { upDelta = 1; auraDelta = 1; }
@@ -265,7 +263,6 @@ const postModel = {
             else { upDelta = -1; downDelta = 1; auraDelta = -2; }
         }
 
-        // 3. Update Redis Buffers (Syntax: .multi and CamelCase)
         const pipeline = redis.multi();
         pipeline.hIncrBy(bufferKey, 'up', upDelta);
         pipeline.hIncrBy(bufferKey, 'down', downDelta);
@@ -274,18 +271,14 @@ const postModel = {
         pipeline.sAdd('dirty_posts', postId.toString());
         await pipeline.exec();
 
-        // 4. Threshold Trigger (Syntax: .hGetAll)
         const counts = await redis.hGetAll(bufferKey);
         const totalActivity = Math.abs(parseInt(counts.up || 0)) + Math.abs(parseInt(counts.down || 0));
-        //Sync if total activity reaches threshold
         if (totalActivity >= 5) {
             this.syncVotesToPostgres(postId, userId).catch(console.error);
         }
     },
 
     async syncVotesToPostgres(postId, userId) {
-
-
         const bufferKey = `vote_buffer:${postId}`;
         const pendingUsersKey = `pending_votes_users:${postId}`;
 
@@ -296,7 +289,6 @@ const postModel = {
 
         if (!userIds.length) return;
 
-        // Syntax: .multi for batching
         const pipe = redis.multi();
         userIds.forEach(uId => pipe.get(`user_vote:${postId.toString()}:${uId.toString()}`));
         const redisValues = await pipe.exec();
@@ -326,7 +318,6 @@ const postModel = {
                 await postgres.query(`DELETE FROM post_votes WHERE post_id = $1 AND user_id = ANY($2)`, [postId, deletes]);
             }
 
-            // YOUR ORIGINAL CTE QUERY (Kept exactly as requested)
             const postRes = await postgres.query(`
             WITH old_post AS (
                 SELECT total_upvotes FROM posts WHERE post_id = $3

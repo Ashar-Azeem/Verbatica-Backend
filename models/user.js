@@ -3,17 +3,17 @@ const { sendOTP } = require('../Utilities/auth/NodeMailer');
 const { generateOTP } = require('../Utilities/auth/GenerateOtp');
 
 const UserModel = {
-    async register(email, password, userName, country, gender) {
+    async register(email, password, userName, country, gender, fcmToken) {
         try {
             const { postgres } = await connectAll();
             const joinDate = new Date().toISOString().split('T')[0];
             const result = await postgres.query(
                 `INSERT INTO users 
-                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key)
+                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key,fcm_token)
                 VALUES 
-                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10)
+                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10,$11)
                 RETURNING *`,
-                [email, password, userName, country, gender, false, "ohhhhh! I am cool and mysterious", joinDate, false, ""]
+                [email, password, userName, country, gender, false, "ohhhhh! I am cool and mysterious", joinDate, false, "", fcmToken]
             );
 
             return result.rows[0];
@@ -50,10 +50,10 @@ const UserModel = {
         return result.rows[0].exists;
     },
 
-    async login(email) {
+    async login(email, fcmToken) {
         const { postgres } = await connectAll();
 
-        const result = await postgres.query('SELECT * FROM users WHERE email = $1 AND "isVerified"=TRUE AND "isGoogleSignIn"=FALSE', [email]);
+        const result = await postgres.query('UPDATE users SET fcm_token=$1 WHERE email = $2 AND "isVerified"=TRUE AND "isGoogleSignIn"=FALSE RETURNING *', [fcmToken, email]);
 
         if (result.rows.length > 0) {
             return result.rows[0];
@@ -221,7 +221,7 @@ const UserModel = {
     },
 
 
-    async CompleteSignUpWithGoogle(user, publicKey, privateKey) {
+    async CompleteSignUpWithGoogle(user, publicKey, privateKey, fcmToken) {
         const { postgres } = await connectAll();
         const client = await postgres.connect();
         const joinDate = new Date().toISOString().split('T')[0];
@@ -230,11 +230,11 @@ const UserModel = {
 
             const result = await postgres.query(
                 `INSERT INTO users 
-                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key)
+                (email, password, "userName", country, gender, "isVerified",about,"joinDate","isGoogleSignIn",public_key,fcm_token)
                 VALUES 
-                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10)
+                ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10,$11)
                 RETURNING *`,
-                [user.email, user.password, user.userName, user.country, user.gender, true, "ohhhhh! I am cool and mysterious", joinDate, true, publicKey]
+                [user.email, user.password, user.userName, user.country, user.gender, true, "ohhhhh! I am cool and mysterious", joinDate, true, publicKey, fcmToken]
             );
 
             await client.query(`DELETE FROM users WHERE email = $1 AND "isVerified"=$2`,
