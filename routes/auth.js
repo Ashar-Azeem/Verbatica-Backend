@@ -155,7 +155,7 @@ router.post('/resetPassword', async (req, res) => {
 
 router.post('/continueWithGoogle', async (req, res) => {
     try {
-        const { token } = req.body;
+        const { token, fcmToken } = req.body;
         const email = await verifyGoogleToken(token);
 
         //Meaning that if user already exists and isVerified then even if they registered old school way the account will be merged.
@@ -164,6 +164,7 @@ router.post('/continueWithGoogle', async (req, res) => {
 
         if (user) {
             const key = await userModel.getPrivateKey(user.id);
+            await userModel.updateToken(fcmToken, user.id);
             return res.status(200).json({ message: 'Complete', user: user, privateKey: key.private_key });
         }
 

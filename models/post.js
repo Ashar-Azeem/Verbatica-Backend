@@ -334,14 +334,16 @@ const postModel = {
                 await postgres.query(`UPDATE users SET aura = aura + $1 WHERE id = $2`,
                     [parseInt(changes.aura || 0), postRes.rows[0].user_id]);
 
-                // Send the notification if new upvotes reach a multiple of 5
-                if (postRes.rows[0].new_upvotes > 0 && postRes.rows[0].new_upvotes % 5 === 0 && postRes.rows[0].new_upvotes > postRes.rows[0].old_upvotes) {
-                    await notificationModel.addNotification(postId, null, userId, postRes.rows[0].user_id, true, false,
-                        true, false, "5 new upvotes", `Your post "${postRes.rows[0].title}" is gaining attention`);
-                }
+
             }
 
             await postgres.query("COMMIT");
+
+            // Send the notification if new upvotes reach a multiple of 5
+            if (postRes.rows[0].new_upvotes > 0 && postRes.rows[0].new_upvotes % 5 === 0 && postRes.rows[0].new_upvotes > postRes.rows[0].old_upvotes) {
+                await notificationModel.addNotification(postId, null, userId, postRes.rows[0].user_id, true, false,
+                    true, false, "5 new upvotes", `Your post "${postRes.rows[0].title}" is gaining attention`);
+            }
 
             await redis.del(bufferKey);
             await redis.del(pendingUsersKey.toString());

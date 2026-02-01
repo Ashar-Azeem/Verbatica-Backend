@@ -152,11 +152,24 @@ router.get('/users', async (req, res) => {
 
     }
 });
+router.put('/updateToken', async (req, res) => {
+    try {
+        const { userId, token } = req.body;
+        const user = await userModel.updateToken(token, userId);
+        if (!user) {
+            return res.status(400).json({ error: 'Failed to update the token' });
+        }
+        return res.status(200).json({ message: 'successfull' });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'error', error: "Something went wrong while updating the token" });
+    }
+});
 
 router.get('/user', async (req, res) => {
     try {
-        const { userId } = req.body;
-        const user = await userModel.getUserViaId(userId);
+        const { userId, fcmToken } = req.body;
+        const user = await userModel.updateToken(fcmToken, userId);
         return res.status(200).json({ message: 'successfull', user: user });
 
     } catch (e) {

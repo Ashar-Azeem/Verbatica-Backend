@@ -39,7 +39,10 @@ router.get('/getMessages', async (req, res) => {
 });
 router.post('/sendMessage', async (req, res) => {
     try {
+        const notificationModel = require('../models/notification');
         const io = req.app.get("io");
+        const onlineUsers = req.app.get("onlineUsers");
+
         const { messageId, chatId, message, sentBy, replyingMessageId, reaction, receiverId, createdAt } = req.body;
 
         const newMessage = await messageModel
@@ -62,16 +65,19 @@ router.post('/sendMessage', async (req, res) => {
         });
 
         //Update the seen status of two users in the chat
-        await chatModel.updateOne(
-            { chatId: chatId },
+        const updatedChat = await chatModel.findOneAndUpdate(
+            { chatId: chatId }, // Your filter
             {
                 $set: {
                     [`lastMessageSeenBy.${receiverId}`]: false,
                     [`lastMessageSeenBy.${sentBy}`]: true,
                     lastMessage: message,
                     lastUpdated: new Date()
-
                 },
+            },
+            {
+                new: true,
+                runValidators: true
             }
         );
 
@@ -79,7 +85,9 @@ router.post('/sendMessage', async (req, res) => {
         const formattedMessage = formatMessage(populatedMessage);
         io.to(sentBy).emit("new_message", formattedMessage);
         io.to(receiverId).emit("new_message", formattedMessage);
-
+        if (!onlineUsers.has(receiverId)) {
+            notificationModel.sendMessagesNotification(receiverId, updatedChat.publicKeys.get(sentBy.toString()), updatedChat.userNames.get(sentBy.toString()), message);
+        }
         return res.status(200).json({ message: 'successfull' });
 
     } catch (e) {
@@ -95,7 +103,7 @@ router.put('/updateMessage', async (req, res) => {
         const updatedMessage = await messageModel.findOneAndUpdate(
             { messageId },
             { $set: { reaction } },
-            { new: true } // 👈 ensures it returns the updated document
+            { new: true }
         );
         const formattedMessage = formatMessage(updatedMessage);
         io.to(notifyUserId).emit("update_message", formattedMessage);

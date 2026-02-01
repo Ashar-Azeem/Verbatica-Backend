@@ -26,5 +26,36 @@ const sendPushNotification = async (userToken, title, body) => {
         console.log('Error sending message:', error);
     }
 };
+const sendE2EENotification = async (userToken, cypherText, public_key, senderUserName) => {
 
-module.exports = sendPushNotification;
+    const message = {
+        //  Data-only payload: This ensures the Android OS stays silent and lets your Flutter code handle the "Reveal".
+        data: {
+            type: 'encrypted_chat',
+            payload: cypherText,
+            publicKey: public_key,
+            title: senderUserName,
+            click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        },
+        android: {
+            priority: 'high',
+            ttl: 3600 * 1000
+        },
+        token: userToken
+    };
+
+    try {
+        const response = await admin.messaging().send(message);
+        console.log('Successfully sent E2EE message to Verbatica user:', response);
+        return response;
+    } catch (error) {
+        console.error('Error sending E2EE message:', error);
+
+        if (error.code === 'messaging/registration-token-not-registered') {
+            console.log(`FCM Token ${userToken} is no longer valid. Remove it from your database.`);
+        }
+        throw error;
+    }
+};
+
+module.exports = { sendPushNotification, sendE2EENotification };

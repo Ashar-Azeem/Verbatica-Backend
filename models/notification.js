@@ -1,7 +1,6 @@
 const connectAll = require('../Utilities/cloud/ConnectionToCloudResources');
-
-
-//Follow this template for the model functions
+const sendPushNotification = require('../services/NotificationService');
+const userModel = require('./user');
 const notificationModel = {
     async addNotification(
         postId,
@@ -53,10 +52,15 @@ const notificationModel = {
                 false,
             ];
 
-            const result = await postgres.query(query, values);
-            return result.rows[0];
-
-
+            await postgres.query(query, values);
+            const receivingUser = await userModel.getUserViaId(receiverId);
+            if (receivingUser && receivingUser.fcm_token) {
+                await sendPushNotification.sendPushNotification(
+                    receivingUser.fcm_token,
+                    title,
+                    description
+                );
+            }
         } catch (e) {
             console.log(e);
             throw e;
@@ -127,8 +131,24 @@ const notificationModel = {
             console.error("Error marking notifications as read:", err);
             return false;
         }
-    }
+    },
 
+    async sendMessagesNotification(userId, senderPublicKey, senderUserName, cypherText) {
+        const user = await userModel.getUserViaId(userId);
+
+        if (user && user.fcm_token) {
+            try {
+                await sendPushNotification.sendE2EENotification(
+                    user.fcm_token,
+                    cypherText,
+                    senderPublicKey,
+                    senderUserName
+                );
+            } catch (error) {
+                console.error("Failed to send E2EE notification:", error);
+            }
+        }
+    }
 
 
 }

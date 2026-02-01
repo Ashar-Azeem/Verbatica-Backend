@@ -21,6 +21,20 @@ const UserModel = {
             throw new Error("Something went wrong while signing up");
         }
     },
+    async updateToken(token, userId) {
+        try {
+            const { postgres } = await connectAll();
+
+            const result = await postgres.query('UPDATE users SET fcm_token=$1 WHERE id=$2 RETURNING *', [token, userId]);
+            if (result.rows.length > 0) {
+                return result.rows[0];
+            } else {
+                return null;
+            }
+        } catch (e) {
+            console.log(e);
+        }
+    },
     async getPrivateKey(userId) {
         try {
             const { postgres } = await connectAll();
