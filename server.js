@@ -81,6 +81,7 @@ io.on("connection", (socket) => {
 
 
 app.set("io", io);
+app.set("onlineUsers",onlineUsers);
 
 // Middleware
 app.use(bodyParser.json({ limit: '100mb' }));
